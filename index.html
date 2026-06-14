@@ -762,8 +762,19 @@ function updateClocks() {
   document.getElementById('clock-local').textContent = localStr;
 }
 
+function refreshImages() {
+  // 5分ごとに地磁気グラフ画像のキャッシュを強制更新
+  const ts = Math.floor(Date.now() / (5 * 60 * 1000)); // 5分単位のタイムスタンプ
+  const imgs = document.querySelectorAll('img[src*="spaceweatherlive.com"], img[src*="sws.bom.gov.au"]');
+  imgs.forEach(img => {
+    const base = img.src.split('?')[0];
+    img.src = base + '?t=' + ts;
+  });
+}
+
 async function loadAll() {
   updateClocks();
+  refreshImages();
   buildTimeline();
   buildMoon();
   buildHpHint();
