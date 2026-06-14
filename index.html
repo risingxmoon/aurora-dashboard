@@ -234,8 +234,8 @@
   <p class="section-label">EPAM（高エネルギー粒子／弾薬残量）</p>
   <div class="card" style="margin-bottom:1.25rem">
     <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px">
-      <div class="mc"><div class="ml">Ep（47-68 keV）</div><div class="mv" id="epam-ep">--</div><div class="ms" id="epam-eps">--</div></div>
-      <div class="mc"><div class="ml">E2p（112-187 keV）</div><div class="mv" id="epam-e2p">--</div><div class="ms" id="epam-e2ps">--</div></div>
+      <div class="mc"><div class="ml">de1（47-65 keV電子）</div><div class="mv" id="epam-ep">--</div><div class="ms" id="epam-eps">--</div></div>
+      <div class="mc"><div class="ml">p1（47-68 keV陽子）</div><div class="mv" id="epam-e2p">--</div><div class="ms" id="epam-e2ps">--</div></div>
       <div class="mc"><div class="ml">状態</div><div class="mv" id="epam-status" style="font-size:14px">--</div><div class="ms" id="epam-trend">--</div></div>
     </div>
     <div style="font-size:11px;color:var(--hint)">↑上昇・高水準 → 宇宙の弾薬満タン。ブレイクアップのポテンシャルあり　↓下降・低水準 → 燃料切れ。帰宅を検討</div>
@@ -687,31 +687,31 @@ async function loadKp() {
 async function loadEpam() {
   try {
     const res = await fetch('data/epam.json');
-    const raw = await res.json();
-    const data = raw.filter((r, i) => i > 0 && r[0] !== null);
-    if (data.length < 2) throw new Error('no data');
+    const data = await res.json();
+    // オブジェクト形式：最新データは先頭
+    if (!Array.isArray(data) || data.length < 2) throw new Error('no data');
     
-    const latest = data[data.length - 1];
-    const prev = data[data.length - 6]; // 30分前
+    const latest = data[0];  // 最新
+    const prev = data[Math.min(6, data.length-1)];  // 約30分前
     
-    // 列: [0]=time, [1]=status, [2]=... [7]=47-68keV_p, [9]=112-187keV_p
-    const ep = parseFloat(latest[7]);
-    const e2p = parseFloat(latest[9]);
-    const epPrev = parseFloat(prev[7]);
+    // de1=47-65keV電子（弾薬残量の主指標）, p1=47-68keV陽子, fp6p=陽子フラックス
+    const de1 = parseFloat(latest.de1);
+    const p1 = parseFloat(latest.p1);
+    const de1Prev = parseFloat(prev.de1);
     
-    if (!isNaN(ep)) {
-      document.getElementById('epam-ep').textContent = ep.toExponential(2);
-      document.getElementById('epam-e2p').textContent = isNaN(e2p) ? '--' : e2p.toExponential(2);
+    if (!isNaN(de1)) {
+      document.getElementById('epam-ep').textContent = de1.toExponential(2);
+      document.getElementById('epam-e2p').textContent = isNaN(p1) ? '--' : p1.toExponential(2);
       
-      const trend = ep > epPrev * 1.2 ? '↑ 上昇中' : ep < epPrev * 0.8 ? '↓ 下降中' : '→ 横ばい';
-      const trendColor = ep > epPrev * 1.2 ? 'var(--green)' : ep < epPrev * 0.8 ? 'var(--red)' : 'var(--muted)';
+      const trend = de1 > de1Prev * 1.2 ? '↑ 上昇中' : de1 < de1Prev * 0.8 ? '↓ 下降中' : '→ 横ばい';
+      const trendColor = de1 > de1Prev * 1.2 ? 'var(--green)' : de1 < de1Prev * 0.8 ? 'var(--red)' : 'var(--muted)';
       document.getElementById('epam-trend').innerHTML = `<span style="color:${trendColor}">${trend}</span>`;
       
-      // 高水準かどうかの判定（一般的な閾値）
-      if (ep > 1000) {
+      // de1の閾値（通常値は1000〜5000程度、磁気嵐時は急上昇）
+      if (de1 > 5000) {
         document.getElementById('epam-status').innerHTML = '<span class="pill p-green">高水準</span>';
         document.getElementById('epam-eps').textContent = '弾薬満タン。粘れ';
-      } else if (ep > 100) {
+      } else if (de1 > 2000) {
         document.getElementById('epam-status').innerHTML = '<span class="pill p-amber">中水準</span>';
         document.getElementById('epam-eps').textContent = 'ポテンシャルあり';
       } else {
