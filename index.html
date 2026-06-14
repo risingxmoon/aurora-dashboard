@@ -241,32 +241,59 @@
     <div style="font-size:11px;color:var(--hint)">↑上昇・高水準 → 宇宙の弾薬満タン。ブレイクアップのポテンシャルあり　↓下降・低水準 → 燃料切れ。帰宅を検討</div>
   </div>
 
-  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:1.25rem">
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px">
     <div>
       <p class="section-label">GOES Magnetometer（地球磁場）</p>
       <div class="card" style="padding:.5rem">
-        <img src="https://services.swpc.noaa.gov/images/goes-magnetometer-24-hour.gif" 
-             alt="GOES Magnetometer 24hour" 
-             style="width:100%;border-radius:6px"
-             onerror="this.parentElement.innerHTML='<div style=color:var(--hint);font-size:12px;padding:.5rem>画像を読み込めませんでした。<a href=https://www.swpc.noaa.gov/products/goes-magnetometer target=_blank style=color:var(--purple)>NOAAで確認</a></div>'">
-        <div style="font-size:10px;color:var(--hint);margin-top:4px">青ライン=GOES-East（カナダ向け）/ 赤ライン=GOES-West（アラスカ向け）。Midnight付近で急降下→ブレイクアップ前兆</div>
+        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank">
+          <img src="https://www.spaceweatherlive.com/images/magnetometers/goes.gif"
+               alt="GOES Magnetometer"
+               style="width:100%;border-radius:6px"
+               onerror="this.src='https://services.swpc.noaa.gov/images/goes-magnetometer-24-hour.gif'">
+        </a>
+        <div style="font-size:10px;color:var(--hint);margin-top:4px">Midnight付近で青/赤ラインが急降下→ブレイクアップ前兆。青=GOES-East（カナダ）赤=GOES-West（アラスカ）</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com</div>
       </div>
     </div>
     <div>
-      <p class="section-label">地磁気グラフ（キルナ / ホバート）</p>
+      <p class="section-label">キルナ地磁気（北欧チェイス用）</p>
       <div class="card" style="padding:.5rem">
-        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">SpaceWeatherLiveでリアルタイム確認：</div>
-        <div style="display:flex;flex-direction:column;gap:6px">
-          <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank" 
-             style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
-            🧲 キルナ地磁気グラフ（北欧チェイス用）
-          </a>
-          <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank"
-             style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
-            🧲 ホバート地磁気グラフ（南半球チェイス用）
-          </a>
-        </div>
-        <div style="font-size:10px;color:var(--hint);margin-top:8px">激しいトゲトゲ → ブレイクアップ中。滑らかな波 → 終了の合図</div>
+        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank">
+          <img src="https://www.spaceweatherlive.com/images/magnetometers/kiruna.gif"
+               alt="Kiruna Magnetometer"
+               style="width:100%;border-radius:6px"
+               onerror="this.parentElement.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html target=_blank style=color:var(--purple);font-size:12px>SpaceWeatherLiveで確認 →</a></div>'">
+        </a>
+        <div style="font-size:10px;color:var(--hint);margin-top:4px">激しいトゲトゲ→ブレイクアップ中。滑らかな波→終了の合図</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com</div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:1.25rem">
+    <div>
+      <p class="section-label">ホバート地磁気（南半球チェイス用）</p>
+      <div class="card" style="padding:.5rem">
+        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank">
+          <img src="https://www.spaceweatherlive.com/images/magnetometers/Hobart.gif"
+               alt="Hobart Magnetometer"
+               style="width:100%;border-radius:6px"
+               onerror="this.parentElement.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.sws.bom.gov.au/Images/Geophysical/Latest%20Conditions/Magnetograms/Hobart.gif target=_blank style=color:var(--purple);font-size:12px>Geoscience Australiaで確認 →</a></div>'">
+        </a>
+        <div style="font-size:10px;color:var(--hint);margin-top:4px">テカポ・クイーンズタウンチェイス時に参照。南半球はトゲが上向きになることも</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com / Geoscience Australia</div>
+      </div>
+    </div>
+    <div>
+      <p class="section-label">ヨーロッパ スタックプロット</p>
+      <div class="card" style="padding:.5rem">
+        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank">
+          <img src="https://www.spaceweatherlive.com/images/magnetometers/mkstackplot.gif"
+               alt="Europe Magnetometer Stackplot"
+               style="width:100%;border-radius:6px"
+               onerror="this.parentElement.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html target=_blank style=color:var(--purple);font-size:12px>SpaceWeatherLiveで確認 →</a></div>'">
+        </a>
+        <div style="font-size:10px;color:var(--hint);margin-top:4px">北から南の順。DOBやSOLが反応したら中緯度ヨーロッパでもチャンス</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com / TGO・DTU・FMI</div>
       </div>
     </div>
   </div>
