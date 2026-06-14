@@ -2,8 +2,8 @@ name: Fetch NOAA Space Weather Data
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # 5分ごとに実行
-  workflow_dispatch:         # 手動実行も可能
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
 
 jobs:
   fetch:
@@ -15,62 +15,75 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Fetch NOAA solar wind data
+      - name: Fetch space weather data
         run: |
           mkdir -p data
 
           # Bz・Bt（磁場）
-          curl -s "https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json" \
+          curl -sf "https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json" \
             -o data/mag.json || echo "[]" > data/mag.json
 
           # 太陽風速度・密度
-          curl -s "https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json" \
+          curl -sf "https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json" \
             -o data/plasma.json || echo "[]" > data/plasma.json
 
           # Kp指数
-          curl -s "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json" \
+          curl -sf "https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json" \
             -o data/kp.json || echo "[]" > data/kp.json
 
           # EPAM（高エネルギー粒子）
-          curl -s "https://services.swpc.noaa.gov/json/ace/epam/ace_epam_5m.json" \
+          curl -sf "https://services.swpc.noaa.gov/json/ace/epam/ace_epam_5m.json" \
             -o data/epam.json || echo "[]" > data/epam.json
 
           # HP（半球電力）
-          curl -s "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json" \
+          curl -sf "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json" \
             -o data/ovation.json || echo "{}" > data/ovation.json
 
-          # GOES Magnetometer画像（NOAAから直接取得）
-          curl -s "https://services.swpc.noaa.gov/images/goes-magnetometer-24-hour.gif" \
-            -o data/goes-mag.gif || true
+          # GOES Magnetometer JSON（グラフ自作用）
+          curl -sf "https://services.swpc.noaa.gov/json/goes/primary/magnetometers-1-day.json" \
+            -o data/goes-mag-primary.json || echo "[]" > data/goes-mag-primary.json
 
-          # ACE EPAM画像（粒子グラフ）
-          curl -s "https://services.swpc.noaa.gov/images/ace-epam-2-hour.gif" \
-            -o data/ace-epam.gif || true
+          curl -sf "https://services.swpc.noaa.gov/json/goes/secondary/magnetometers-1-day.json" \
+            -o data/goes-mag-secondary.json || echo "[]" > data/goes-mag-secondary.json
 
-          # キルナ地磁気（IRFから直接取得）
-          curl -s "https://www.irf.se/maggraphs/sgu/quick.png" \
-            -o data/kiruna-mag.png \
+          # トロムソ地磁気GIF（TGO）
+          curl -sf "https://flux.phys.uit.no/Last24/Last24_tro2a.gif" \
+            -o data/tromso-mag.gif \
             -A "Mozilla/5.0" || true
 
-          # ヨーロッパ スタックプロット（SpaceWeatherLive）
-          curl -s "https://www.spaceweatherlive.com/images/magnetometers/mkstackplot.gif" \
-            -o data/eu-stackplot.gif \
+          # ホバート地磁気GIF（SpaceWeatherLive）
+          curl -sf "https://www.spaceweatherlive.com/images/magnetometers/Hobart.gif" \
+            -o data/hobart-mag.gif \
             -e "https://www.spaceweatherlive.com" || true
 
-          # ホバート地磁気（Geoscience Australia）
-          curl -s "https://www.sws.bom.gov.au/Images/Geophysical/Latest%20Conditions/Magnetograms/Hobart.gif" \
-            -o data/hobart-mag.gif || true
+          # NZ地磁気データ（Eyrewell・オタゴ大学MANA Network）
+          curl -sf "https://solartsunami.otago.ac.nz/data/eyrlive.txt" \
+            -o data/nz-eyrewell.txt \
+            -A "Mozilla/5.0" || true
+
+          curl -sf "https://solartsunami.otago.ac.nz/data/awalive.txt" \
+            -o data/nz-awarua.txt \
+            -A "Mozilla/5.0" || true
+
+          # ACE EPAM画像
+          curl -sf "https://services.swpc.noaa.gov/images/ace-epam-2-hour.gif" \
+            -o data/ace-epam.gif || true
+
+          # ヨーロッパ スタックプロット
+          curl -sf "https://www.spaceweatherlive.com/images/magnetometers/mkstackplot.gif" \
+            -o data/eu-stackplot.gif \
+            -e "https://www.spaceweatherlive.com" || true
 
           # 更新時刻を記録
           echo "{\"updated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > data/meta.json
 
-          echo "Data fetched successfully at $(date -u)"
-          ls -la data/
+          echo "=== Data fetched at $(date -u) ==="
+          ls -lh data/
 
       - name: Commit and push data
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
-          git diff --staged --quiet || git commit -m "Update NOAA data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          git diff --staged --quiet || git commit -m "Update space weather data $(date -u +%Y-%m-%dT%H:%M:%SZ)"
           git push
