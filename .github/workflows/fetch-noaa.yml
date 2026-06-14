@@ -39,41 +39,6 @@ jobs:
           curl -sf "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json" \
             -o data/ovation.json || echo "{}" > data/ovation.json
 
-          # GOES Magnetometer JSON（グラフ自作用）
-          curl -sf "https://services.swpc.noaa.gov/json/goes/primary/magnetometers-1-day.json" \
-            -o data/goes-mag-primary.json || echo "[]" > data/goes-mag-primary.json
-
-          curl -sf "https://services.swpc.noaa.gov/json/goes/secondary/magnetometers-1-day.json" \
-            -o data/goes-mag-secondary.json || echo "[]" > data/goes-mag-secondary.json
-
-          # トロムソ地磁気GIF（TGO）
-          curl -sf "https://flux.phys.uit.no/Last24/Last24_tro2a.gif" \
-            -o data/tromso-mag.gif \
-            -A "Mozilla/5.0" || true
-
-          # ホバート地磁気GIF（SpaceWeatherLive）
-          curl -sf "https://www.spaceweatherlive.com/images/magnetometers/Hobart.gif" \
-            -o data/hobart-mag.gif \
-            -e "https://www.spaceweatherlive.com" || true
-
-          # NZ地磁気データ（Eyrewell・オタゴ大学MANA Network）
-          curl -sf "https://solartsunami.otago.ac.nz/data/eyrlive.txt" \
-            -o data/nz-eyrewell.txt \
-            -A "Mozilla/5.0" || true
-
-          curl -sf "https://solartsunami.otago.ac.nz/data/awalive.txt" \
-            -o data/nz-awarua.txt \
-            -A "Mozilla/5.0" || true
-
-          # ACE EPAM画像
-          curl -sf "https://services.swpc.noaa.gov/images/ace-epam-2-hour.gif" \
-            -o data/ace-epam.gif || true
-
-          # ヨーロッパ スタックプロット
-          curl -sf "https://www.spaceweatherlive.com/images/magnetometers/mkstackplot.gif" \
-            -o data/eu-stackplot.gif \
-            -e "https://www.spaceweatherlive.com" || true
-
           # 更新時刻を記録
           echo "{\"updated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > data/meta.json
 
