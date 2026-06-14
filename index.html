@@ -174,7 +174,6 @@
       <div style="font-size:11px;color:var(--purple)" id="clock-local">現地 --:--</div>
     </div>
     <span class="update-time" id="update-time">--</span>
-    <button class="btn" onclick="loadAll()">↻ 更新</button>
   </div>
 </header>
 
@@ -182,7 +181,8 @@
 
   <div class="loc-row">
     <span class="loc-label">観測地</span>
-    <select id="loc-sel" onchange="onLocChange()"></select>
+    <select id="loc-sel"></select>
+    <button class="btn" onclick="onLocChange()">確定 ✓</button>
     <span class="badge" id="loc-badge">--</span>
   </div>
 
@@ -226,8 +226,6 @@
       <div class="card" id="hp-hint"><div style="color:var(--muted);font-size:12px">--</div></div>
     </div>
   </div>
-
-</div>
 
   <hr class="divider">
 
@@ -295,7 +293,7 @@
     </div>
   </div>
 
-<hr class="divider">
+  <hr class="divider">
 
   <p class="section-label">一次情報へのクイックリンク</p>
   <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:1.25rem">
@@ -394,6 +392,7 @@ function onLocChange() {
   buildTimeline();
   buildMoon();
   buildHpHint();
+  loadAll();
 }
 
 function sunAlt(date, lat, lon) {
@@ -686,65 +685,88 @@ async function loadSolarWind() {
 }
 
 async function loadHp() {
-  try {
-    const res = await fetch('data/ovation.json');
-    const data = await res.json();
-    // HP is in the metadata
-    const hp = data && data['Hemispheric Power'] ? parseFloat(data['Hemispheric Power']) : null;
-    if (hp !== null && !isNaN(hp)) {
-      document.getElementById('hp').textContent = Math.round(hp) + ' GW';
-      const l = curLoc;
-      let hpClass, hpMsg;
-      if (l.hpMin) {
-        // 低緯度
-        if (hp >= l.hpMin) { hpClass = 'p-green'; hpMsg = '観測チャンスあり'; }
-        else if (hp >= l.hpMin * 0.7) { hpClass = 'p-amber'; hpMsg = `目安まであと${Math.round(l.hpMin - hp)}GW`; }
-        else { hpClass = 'p-red'; hpMsg = `目安${l.hpMin}GWに不足`; }
-      } else {
-        // オーロラ帯
-        if (hp >= 50) { hpClass = 'p-green'; hpMsg = '活発'; }
-        else if (hp >= 20) { hpClass = 'p-amber'; hpMsg = '中程度'; }
-        else { hpClass = 'p-muted'; hpMsg = '穏やか'; }
-      }
-      document.getElementById('hps').innerHTML = `<span class="pill ${hpClass}">${hpMsg}</span>`;
+  // HPのパースと表示を共通化
+  function applyHp(hp) {
+    document.getElementById('hp').textContent = Math.round(hp) + ' GW';
+    const l = curLoc;
+    let hpClass, hpMsg;
+    if (l.hpMin) {
+      if (hp >= l.hpMin) { hpClass = 'p-green'; hpMsg = '観測チャンスあり'; }
+      else if (hp >= l.hpMin * 0.7) { hpClass = 'p-amber'; hpMsg = `目安まであと${Math.round(l.hpMin - hp)}GW`; }
+      else { hpClass = 'p-red'; hpMsg = `目安${l.hpMin}GWに不足`; }
     } else {
-      document.getElementById('hp').textContent = '--';
-      document.getElementById('hps').textContent = '--';
+      if (hp >= 50) { hpClass = 'p-green'; hpMsg = '活発'; }
+      else if (hp >= 20) { hpClass = 'p-amber'; hpMsg = '中程度'; }
+      else { hpClass = 'p-muted'; hpMsg = '穏やか'; }
     }
-  } catch(e) {
-    // フォールバック：aurora ovation forecast
-    try {
-      const res2 = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
-      document.getElementById('hp').textContent = '--';
-      document.getElementById('hps').textContent = 'データなし';
-    } catch(e2) {
-      document.getElementById('hp').textContent = '--';
-    }
+    document.getElementById('hps').innerHTML = `<span class="pill ${hpClass}">${hpMsg}</span>`;
   }
+
+  // 観測地の緯度で南北を自動判定
+  const isSouth = curLoc.lat < 0;
+
+  // まず data/hp.json（GitHub Actionsが生成）を試す
+  try {
+    const res = await fetch('data/hp.json');
+    const data = await res.json();
+    // フォーマット例: {"north": 42, "south": 38, "observed": "..."}
+    const hp = parseFloat(isSouth ? data.south : data.north);
+    if (!isNaN(hp)) { applyHp(hp); return; }
+  } catch(e) {}
+
+  // フォールバック：NOAAのテキストファイルを直接取得
+  try {
+    const res2 = await fetch('https://services.swpc.noaa.gov/text/aurora-nowcast-hemi-power.txt');
+    const text = await res2.text();
+    // コメント行を除いた最終行を取得
+    const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'));
+    if (lines.length > 0) {
+      const cols = lines[lines.length - 1].trim().split(/\s+/);
+      // 列: OBS_TIME  FORECAST_TIME  NORTH_HP  SOUTH_HP
+      const hp = parseFloat(isSouth ? cols[3] : cols[2]);
+      if (!isNaN(hp)) { applyHp(hp); return; }
+    }
+  } catch(e2) {}
+
+  document.getElementById('hp').textContent = '--';
+  document.getElementById('hps').textContent = '--';
 }
 
 async function loadKp() {
+  // KPのパースと表示を共通化
+  function applyKp(kp) {
+    document.getElementById('kp').textContent = isNaN(kp) ? '--' : kp.toFixed(1);
+  }
+
+  // data/kp.json を試す（GitHub Actionsが生成）
+  // noaa-planetary-k-index.json の形式：[{time_tag, Kp, a_running, station_count}, ...]
   try {
     const res = await fetch('data/kp.json');
     const raw = await res.json();
-    const rows = raw.filter((r, i) => i > 0 && r[1] !== null && !isNaN(parseFloat(r[1])));
-    if (rows.length > 0) {
-      const kp = parseFloat(rows[rows.length-1][1]);
-      document.getElementById('kp').textContent = isNaN(kp) ? '--' : kp.toFixed(1);
-    } else {
-      document.getElementById('kp').textContent = '--';
-    }
-  } catch(e) {
-    try {
-      const res2 = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
-      const raw2 = await res2.json();
-      const rows2 = raw2.filter((r, i) => i > 0 && r[1] !== null && !isNaN(parseFloat(r[1])));
-      if (rows2.length > 0) {
-        const kp2 = parseFloat(rows2[rows2.length-1][1]);
-        document.getElementById('kp').textContent = isNaN(kp2) ? '--' : kp2.toFixed(1);
+    if (Array.isArray(raw) && raw.length > 0) {
+      // オブジェクト配列形式（{time_tag, Kp}）
+      const rows = raw.filter(r => r.Kp !== null && r.Kp !== undefined && !isNaN(parseFloat(r.Kp)));
+      if (rows.length > 0) {
+        applyKp(parseFloat(rows[rows.length - 1].Kp));
+        return;
       }
-    } catch(e2) { document.getElementById('kp').textContent = '--'; }
-  }
+    }
+  } catch(e) {}
+
+  // フォールバック：直接NOAAから取得
+  try {
+    const res2 = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+    const raw2 = await res2.json();
+    if (Array.isArray(raw2) && raw2.length > 0) {
+      const rows2 = raw2.filter(r => r.Kp !== null && r.Kp !== undefined && !isNaN(parseFloat(r.Kp)));
+      if (rows2.length > 0) {
+        applyKp(parseFloat(rows2[rows2.length - 1].Kp));
+        return;
+      }
+    }
+  } catch(e2) {}
+
+  document.getElementById('kp').textContent = '--';
 }
 
 async function loadEpam() {
