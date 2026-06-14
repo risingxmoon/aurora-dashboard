@@ -244,28 +244,34 @@
   <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px">
     <div>
       <p class="section-label">GOES Magnetometer（地球磁場）</p>
-      <div class="card" style="padding:.5rem">
-        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank">
-          <img src="https://www.spaceweatherlive.com/images/magnetometers/goes.gif"
-               alt="GOES Magnetometer"
-               style="width:100%;border-radius:6px"
-               onerror="this.src='https://services.swpc.noaa.gov/images/goes-magnetometer-24-hour.gif'">
+      <div class="card" style="padding:.75rem">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">Midnight付近で青/赤ラインが急降下→ブレイクアップ前兆<br>青=GOES-East（カナダ）赤=GOES-West（アラスカ）</div>
+        <a href="https://www.swpc.noaa.gov/products/goes-magnetometer" target="_blank"
+           style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border);margin-bottom:6px">
+          <span style="font-size:13px;font-weight:600">🛰 NOAA GOES Magnetometer</span>
+          <span style="font-size:11px;color:var(--purple)">開く →</span>
         </a>
-        <div style="font-size:10px;color:var(--hint);margin-top:4px">Midnight付近で青/赤ラインが急降下→ブレイクアップ前兆。青=GOES-East（カナダ）赤=GOES-West（アラスカ）</div>
-        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com</div>
+        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank"
+           style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
+          <span style="font-size:13px;font-weight:600">⚡ SpaceWeatherLive Magnetometers</span>
+          <span style="font-size:11px;color:var(--purple)">開く →</span>
+        </a>
       </div>
     </div>
     <div>
       <p class="section-label">キルナ地磁気（北欧チェイス用）</p>
-      <div class="card" style="padding:.5rem">
-        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank">
-          <img src="https://www.spaceweatherlive.com/images/magnetometers/kiruna.gif"
-               alt="Kiruna Magnetometer"
-               style="width:100%;border-radius:6px"
-               onerror="this.parentElement.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html target=_blank style=color:var(--purple);font-size:12px>SpaceWeatherLiveで確認 →</a></div>'">
+      <div class="card" style="padding:.75rem">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:10px">激しいトゲトゲ→ブレイクアップ中<br>滑らかな波→終了の合図<br>北欧チェイス時はSpaceWeatherLiveのKirunaグラフを確認</div>
+        <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank"
+           style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border);margin-bottom:6px">
+          <span style="font-size:13px;font-weight:600">🧲 Kiruna Magnetometer</span>
+          <span style="font-size:11px;color:var(--purple)">開く →</span>
         </a>
-        <div style="font-size:10px;color:var(--hint);margin-top:4px">激しいトゲトゲ→ブレイクアップ中。滑らかな波→終了の合図</div>
-        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com</div>
+        <a href="https://www.irf.se/Observatory/?link=Magnetometers" target="_blank"
+           style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
+          <span style="font-size:13px;font-weight:600">🔬 IRF Kiruna（一次データ）</span>
+          <span style="font-size:11px;color:var(--purple)">開く →</span>
+        </a>
       </div>
     </div>
   </div>
@@ -445,44 +451,83 @@ function buildTimeline() {
   const todayUTC = new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()));
   const tmrUTC = new Date(todayUTC.getTime()+86400000);
 
-  const civilDusk  = findEvent(todayUTC, l.lat, l.lon, -6, false);
-  const nautDusk   = findEvent(todayUTC, l.lat, l.lon, -12, false);
-  const astroDusk  = findEvent(todayUTC, l.lat, l.lon, -18, false);
-  const astroRise  = findEvent(tmrUTC,   l.lat, l.lon, -18, true);
-  const nautRise   = findEvent(tmrUTC,   l.lat, l.lon, -12, true);
-  const sunrise    = findEvent(tmrUTC,   l.lat, l.lon, -0.833, true);
+  // 日没〜日の出を基準に「今夜」のウィンドウを決める
+  const sunset   = findEvent(todayUTC, l.lat, l.lon, -0.833, false);
+  const sunrise  = findEvent(tmrUTC,   l.lat, l.lon, -0.833, true);
+  const civilDusk= findEvent(todayUTC, l.lat, l.lon, -6, false);
+  const nautDusk = findEvent(todayUTC, l.lat, l.lon, -12, false);
+  const nautRise = findEvent(tmrUTC,   l.lat, l.lon, -12, true);
+
+  // 天文薄暮：存在しない場合（白夜近く）はnullにする
+  let astroDusk = null, astroRise = null;
+  const minAlt = (() => {
+    // 今日の最低太陽高度を計算（正午から逆算）
+    let minA = 90;
+    for(let h=0;h<24;h++){
+      const t = new Date(todayUTC.getTime()+h*3600000);
+      const a = sunAlt(t, l.lat, l.lon);
+      if(a < minA) minA = a;
+    }
+    return minA;
+  })();
+
+  if(minAlt < -18) {
+    // 天文薄暮が存在する
+    astroDusk = findEvent(todayUTC, l.lat, l.lon, -18, false);
+    astroRise = findEvent(tmrUTC,   l.lat, l.lon, -18, true);
+  }
 
   const [mmtH,mmtM] = l.mmt.split(':').map(Number);
-  const mmtUTC = new Date(todayUTC.getTime()+((mmtH+mmtM/60-l.tz+48)%24)*3600000);
+  // MMTのUTC時刻を計算（日付をまたぐ考慮あり）
+  let mmtOffsetFromMidnight = (mmtH + mmtM/60 - l.tz + 48) % 24;
+  // 夜のウィンドウ内に収まるよう調整
+  let mmtUTC = new Date(todayUTC.getTime() + mmtOffsetFromMidnight * 3600000);
+  // MMTが日没より前なら翌日に
+  if(mmtUTC < sunset) mmtUTC = new Date(mmtUTC.getTime() + 86400000);
+  // MMTが日の出より後なら前日に
+  if(mmtUTC > sunrise) mmtUTC = new Date(mmtUTC.getTime() - 86400000);
 
   const phase = getMoonPhase(now);
   const moonOffH = (parseFloat(phase.age)/29.53)*24;
-  const moonRiseUTC = new Date(todayUTC.getTime()+((moonOffH+6)%24)*3600000);
+  let moonRiseUTC = new Date(todayUTC.getTime()+((moonOffH+6)%24)*3600000);
 
-  const events = [
-    {t:civilDusk,  label:'市民薄暮終了',      color:'#f59e0b', note:'空が暗くなり始める'},
-    {t:nautDusk,   label:'航海薄暮終了',      color:'#60a5fa', note:'薄青い空'},
-    {t:astroDusk,  label:'天文薄暮終了 ★',   color:'#818cf8', note:'撮影ゾーン開始'},
-    {t:mmtUTC,     label:'MMT（磁気真夜中）★★', color:'#a78bfa', note:'ブレイクアップ最多時間帯'},
-    {t:astroRise,  label:'天文薄明開始',      color:'#818cf8', note:'撮影ゾーン終了'},
-    {t:nautRise,   label:'航海薄明開始',      color:'#60a5fa', note:''},
-    {t:sunrise,    label:'日の出',            color:'#f59e0b', note:''},
-    {t:moonRiseUTC,label:'月の出',            color:'#94a3b8', note:`月齢${phase.age}日 照度${phase.illum}%`},
-  ].sort((a,b)=>a.t-b.t);
+  const events = [];
+  events.push({t:civilDusk,  label:'市民薄暮終了',         color:'#f59e0b', note:'空が暗くなり始める'});
+  events.push({t:nautDusk,   label:'航海薄暮終了',         color:'#60a5fa', note:'薄青い空'});
+  if(astroDusk) {
+    events.push({t:astroDusk, label:'天文薄暮終了 ★',      color:'#818cf8', note:'撮影ゾーン開始'});
+  } else {
+    events.push({t:nautDusk,  label:'⚠ 天文薄暮なし',     color:'#ef4444', note:'白夜近く：空が完全に暗くならない'});
+  }
+  events.push({t:mmtUTC,    label:'MMT（磁気真夜中）★★', color:'#a78bfa', note:'ブレイクアップ最多時間帯'});
+  if(astroRise) {
+    events.push({t:astroRise, label:'天文薄明開始',         color:'#818cf8', note:'撮影ゾーン終了'});
+  }
+  events.push({t:nautRise,   label:'航海薄明開始',         color:'#60a5fa', note:''});
+  events.push({t:sunrise,    label:'日の出',               color:'#f59e0b', note:''});
+  events.push({t:moonRiseUTC,label:'月の出',               color:'#94a3b8', note:`月齢${phase.age}日 照度${phase.illum}%`});
 
-  const nextIdx = events.findIndex(e=>e.t>now);
+  // 日没〜翌日の出の範囲でソート
+  const nightEvents = events.filter(e => e.t >= sunset && e.t <= sunrise);
+  nightEvents.sort((a,b)=>a.t-b.t);
+
+  const nextIdx = nightEvents.findIndex(e=>e.t>now);
   let html = '';
-  events.forEach((ev,i) => {
-    const past = ev.t < now;
-    const isNext = i === nextIdx;
-    const cls = past ? 'tl-past' : isNext ? 'tl-next' : '';
-    html += `<div class="tl-row ${cls}">
-      <span class="tl-time">${fmtLocal(ev.t, l.tz)}</span>
-      <div class="tl-dot" style="background:${ev.color};${isNext?'box-shadow:0 0 0 3px '+ev.color+'33':''}"></div>
-      <span class="tl-label">${ev.label}</span>
-      <span class="tl-note">${ev.note}</span>
-    </div>`;
-  });
+  if(nightEvents.length === 0) {
+    html = '<div style="color:var(--hint);font-size:12px">この時期・場所では夜のデータがありません</div>';
+  } else {
+    nightEvents.forEach((ev,i) => {
+      const past = ev.t < now;
+      const isNext = i === nextIdx;
+      const cls = past ? 'tl-past' : isNext ? 'tl-next' : '';
+      html += `<div class="tl-row ${cls}">
+        <span class="tl-time">${fmtLocal(ev.t, l.tz)}</span>
+        <div class="tl-dot" style="background:${ev.color};${isNext?'box-shadow:0 0 0 3px '+ev.color+'33':''}"></div>
+        <span class="tl-label">${ev.label}</span>
+        <span class="tl-note">${ev.note}</span>
+      </div>`;
+    });
+  }
   document.getElementById('timeline').innerHTML = html;
 }
 
