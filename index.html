@@ -169,6 +169,10 @@
 <header class="header">
   <div class="logo">REVONTULET <span>Aurora Dashboard</span></div>
   <div class="header-right">
+    <div style="text-align:right;line-height:1.4">
+      <div style="font-size:11px;color:var(--hint)" id="clock-utc">UTC --:--</div>
+      <div style="font-size:11px;color:var(--purple)" id="clock-local">現地 --:--</div>
+    </div>
     <span class="update-time" id="update-time">--</span>
     <button class="btn" onclick="loadAll()">↻ 更新</button>
   </div>
@@ -188,10 +192,11 @@
   </div>
 
   <p class="section-label">リアルタイム宇宙天気（NOAA / SOLAR-1）</p>
-  <div class="g4">
+  <div style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-bottom:1.25rem">
     <div class="mc"><div class="ml">Bz（磁場南北）</div><div class="mv" id="bz">--</div><div class="ms" id="bzs">--</div></div>
     <div class="mc"><div class="ml">Bt（磁場総量）</div><div class="mv" id="bt">--</div><div class="ms" id="bts">--</div></div>
     <div class="mc"><div class="ml">太陽風速度</div><div class="mv" id="spd">--</div><div class="ms" id="spds">--</div></div>
+    <div class="mc"><div class="ml">HP（半球電力）</div><div class="mv" id="hp">--</div><div class="ms" id="hps">--</div></div>
     <div class="mc"><div class="ml">Kp指数</div><div class="mv" id="kp">--</div><div class="ms" style="color:var(--hint)">現場では参考程度</div></div>
   </div>
 
@@ -224,10 +229,90 @@
 
 </div>
 
+  <hr class="divider">
+
+  <p class="section-label">EPAM（高エネルギー粒子／弾薬残量）</p>
+  <div class="card" style="margin-bottom:1.25rem">
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px">
+      <div class="mc"><div class="ml">Ep（47-68 keV）</div><div class="mv" id="epam-ep">--</div><div class="ms" id="epam-eps">--</div></div>
+      <div class="mc"><div class="ml">E2p（112-187 keV）</div><div class="mv" id="epam-e2p">--</div><div class="ms" id="epam-e2ps">--</div></div>
+      <div class="mc"><div class="ml">状態</div><div class="mv" id="epam-status" style="font-size:14px">--</div><div class="ms" id="epam-trend">--</div></div>
+    </div>
+    <div style="font-size:11px;color:var(--hint)">↑上昇・高水準 → 宇宙の弾薬満タン。ブレイクアップのポテンシャルあり　↓下降・低水準 → 燃料切れ。帰宅を検討</div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:1.25rem">
+    <div>
+      <p class="section-label">GOES Magnetometer（地球磁場）</p>
+      <div class="card" style="padding:.5rem">
+        <img src="https://services.swpc.noaa.gov/images/goes-magnetometer-24-hour.gif" 
+             alt="GOES Magnetometer 24hour" 
+             style="width:100%;border-radius:6px"
+             onerror="this.parentElement.innerHTML='<div style=color:var(--hint);font-size:12px;padding:.5rem>画像を読み込めませんでした。<a href=https://www.swpc.noaa.gov/products/goes-magnetometer target=_blank style=color:var(--purple)>NOAAで確認</a></div>'">
+        <div style="font-size:10px;color:var(--hint);margin-top:4px">青ライン=GOES-East（カナダ向け）/ 赤ライン=GOES-West（アラスカ向け）。Midnight付近で急降下→ブレイクアップ前兆</div>
+      </div>
+    </div>
+    <div>
+      <p class="section-label">地磁気グラフ（キルナ / ホバート）</p>
+      <div class="card" style="padding:.5rem">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:8px">SpaceWeatherLiveでリアルタイム確認：</div>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank" 
+             style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
+            🧲 キルナ地磁気グラフ（北欧チェイス用）
+          </a>
+          <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank"
+             style="display:inline-flex;align-items:center;gap:6px;font-size:12px;padding:6px 10px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
+            🧲 ホバート地磁気グラフ（南半球チェイス用）
+          </a>
+        </div>
+        <div style="font-size:10px;color:var(--hint);margin-top:8px">激しいトゲトゲ → ブレイクアップ中。滑らかな波 → 終了の合図</div>
+      </div>
+    </div>
+  </div>
+
+  <hr class="divider">
+
+  <p class="section-label">一次情報へのクイックリンク</p>
+  <div style="display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:1.25rem">
+    <a href="https://www.swpc.noaa.gov/communities/space-weather-enthusiasts-dashboard" target="_blank"
+       style="display:block;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;text-decoration:none;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">🛰 NOAA Dashboard</div>
+      <div style="font-size:11px;color:var(--muted)">宇宙天気愛好家向け総合ダッシュボード</div>
+    </a>
+    <a href="https://www.spaceweatherlive.com" target="_blank"
+       style="display:block;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;text-decoration:none;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">⚡ SpaceWeatherLive</div>
+      <div style="font-size:11px;color:var(--muted)">Bz・HP・地磁気リアルタイム監視の基本</div>
+    </a>
+    <a href="https://www.windy.com" target="_blank"
+       style="display:block;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;text-decoration:none;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">🌤 Windy</div>
+      <div style="font-size:11px;color:var(--muted)">雲量・衛星写真・風向きリアルタイム</div>
+    </a>
+    <a href="https://www.swpc.noaa.gov/products/solar-wind" target="_blank"
+       style="display:block;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;text-decoration:none;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">🌬 SOLAR-1 太陽風</div>
+      <div style="font-size:11px;color:var(--muted)">SOLAR-1リアルタイムデータ（NOAA）</div>
+    </a>
+    <a href="https://www.spaceweatherlive.com/en/solar-activity/huxt-forecast.html" target="_blank"
+       style="display:block;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;text-decoration:none;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">🔭 HUXt CME予測</div>
+      <div style="font-size:11px;color:var(--muted)">CME到達時刻予測モデル</div>
+    </a>
+    <a href="https://sdo.gsfc.nasa.gov" target="_blank"
+       style="display:block;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);padding:.875rem 1rem;text-decoration:none;color:var(--text)">
+      <div style="font-size:13px;font-weight:600;margin-bottom:4px">☀️ NASA SDO</div>
+      <div style="font-size:11px;color:var(--muted)">太陽表面ライブ・黒点型確認</div>
+    </a>
+  </div>
+
+</div>
+
 <footer class="footer">
   データ出典：<a href="https://www.swpc.noaa.gov/" target="_blank">NOAA / SWPC</a>（SOLAR-1・5分更新）　
   制作：<a href="https://x.com/risingxmoonfoto" target="_blank">@risingxmoonfoto</a>　
-  本ダッシュボードは <em>Revontulet ―北欧オーロラハントガイド</em> の補助ツールです
+  本ダッシュボードは <em>Revontulet ―北欧オーロラチェイスガイド</em> の補助ツールです
 </footer>
 
 <script>
@@ -462,16 +547,17 @@ function drawChart(times, values) {
   });
 }
 
+// GitHub Pagesのdata/フォルダからキャッシュ済みデータを読み込む
+// GitHub Actionsが5分ごとにNOAAからデータを取得してdata/に保存している
 async function loadSolarWind() {
   try {
     const [magRes, plasRes] = await Promise.all([
-      fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json'),
-      fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json')
+      fetch('data/mag.json'),
+      fetch('data/plasma.json')
     ]);
     const magRaw = await magRes.json();
     const plasRaw = await plasRes.json();
 
-    // 先頭行はヘッダー行なのでスキップ
     const mag = magRaw.slice(1).filter(r => r[0] !== null);
     const plas = plasRaw.slice(1).filter(r => r[0] !== null);
 
@@ -480,8 +566,6 @@ async function loadSolarWind() {
     const lm = mag[mag.length-1];
     const lp = plas[plas.length-1];
 
-    // mag列: [0]=time, [1]=Bx, [2]=By, [3]=Bz, [4]=Lon, [5]=Lat, [6]=Bt
-    // plas列: [0]=time, [1]=density, [2]=speed, [3]=temperature
     const bz = parseFloat(lm[3]);
     const bt = parseFloat(lm[6]);
     const speed = parseFloat(lp[2]);
@@ -504,31 +588,166 @@ async function loadSolarWind() {
     updateRetreat(bz, speed);
   } catch(e) {
     console.error('Solar wind fetch error:', e);
+    // フォールバック：直接NOAAから取得を試みる
+    try {
+      const [magRes2, plasRes2] = await Promise.all([
+        fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json'),
+        fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json')
+      ]);
+      const magRaw2 = await magRes2.json();
+      const plasRaw2 = await plasRes2.json();
+      const mag2 = magRaw2.slice(1).filter(r => r[0] !== null);
+      const plas2 = plasRaw2.slice(1).filter(r => r[0] !== null);
+      const lm2 = mag2[mag2.length-1];
+      const lp2 = plas2[plas2.length-1];
+      const bz2 = parseFloat(lm2[3]);
+      const bt2 = parseFloat(lm2[6]);
+      const speed2 = parseFloat(lp2[2]);
+      if (!isNaN(bz2) && !isNaN(speed2)) {
+        document.getElementById('bz').textContent = bz2.toFixed(1)+' nT';
+        document.getElementById('bzs').innerHTML = bz2<=-10?'<span class="pill p-green">強い南向き</span>':bz2<=-5?'<span class="pill p-amber">南向き</span>':bz2>0?'<span class="pill p-red">北向き（閉）</span>':'<span class="pill p-muted">ほぼゼロ</span>';
+        document.getElementById('bt').textContent = isNaN(bt2)?'--':bt2.toFixed(1)+' nT';
+        document.getElementById('bts').textContent = bt2>=10?'強い（期待大）':bt2>=5?'中程度':'弱い';
+        document.getElementById('spd').textContent = Math.round(speed2)+' km/s';
+        document.getElementById('spds').textContent = speed2>=600?'高速風（コロナホール）':speed2>=500?'やや高速':'通常速度';
+        document.getElementById('update-time').textContent = '更新(直接)：'+lm2[0].slice(11,16)+' UTC';
+        const hist2 = mag2.slice(-24).map(r=>({t:r[0].slice(11,16),v:parseFloat(r[3])})).filter(r=>!isNaN(r.v));
+        drawChart(hist2.map(r=>r.t), hist2.map(r=>r.v));
+        updateVerdict(bz2);
+        updateRetreat(bz2, speed2);
+        return;
+      }
+    } catch(e2) {}
     updateVerdict(null);
+  }
+}
+
+async function loadHp() {
+  try {
+    const res = await fetch('data/ovation.json');
+    const data = await res.json();
+    // HP is in the metadata
+    const hp = data && data['Hemispheric Power'] ? parseFloat(data['Hemispheric Power']) : null;
+    if (hp !== null && !isNaN(hp)) {
+      document.getElementById('hp').textContent = Math.round(hp) + ' GW';
+      const l = curLoc;
+      let hpClass, hpMsg;
+      if (l.hpMin) {
+        // 低緯度
+        if (hp >= l.hpMin) { hpClass = 'p-green'; hpMsg = '観測チャンスあり'; }
+        else if (hp >= l.hpMin * 0.7) { hpClass = 'p-amber'; hpMsg = `目安まであと${Math.round(l.hpMin - hp)}GW`; }
+        else { hpClass = 'p-red'; hpMsg = `目安${l.hpMin}GWに不足`; }
+      } else {
+        // オーロラ帯
+        if (hp >= 50) { hpClass = 'p-green'; hpMsg = '活発'; }
+        else if (hp >= 20) { hpClass = 'p-amber'; hpMsg = '中程度'; }
+        else { hpClass = 'p-muted'; hpMsg = '穏やか'; }
+      }
+      document.getElementById('hps').innerHTML = `<span class="pill ${hpClass}">${hpMsg}</span>`;
+    } else {
+      document.getElementById('hp').textContent = '--';
+      document.getElementById('hps').textContent = '--';
+    }
+  } catch(e) {
+    // フォールバック：aurora ovation forecast
+    try {
+      const res2 = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+      document.getElementById('hp').textContent = '--';
+      document.getElementById('hps').textContent = 'データなし';
+    } catch(e2) {
+      document.getElementById('hp').textContent = '--';
+    }
   }
 }
 
 async function loadKp() {
   try {
-    const res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+    const res = await fetch('data/kp.json');
     const raw = await res.json();
-    const data = raw.slice(1).filter(r => r[1] !== null);
-    const kp = parseFloat(data[data.length-1][1]);
-    document.getElementById('kp').textContent = isNaN(kp) ? '--' : kp.toFixed(1);
-  } catch(e) { document.getElementById('kp').textContent = '--'; }
+    const rows = raw.filter((r, i) => i > 0 && r[1] !== null && !isNaN(parseFloat(r[1])));
+    if (rows.length > 0) {
+      const kp = parseFloat(rows[rows.length-1][1]);
+      document.getElementById('kp').textContent = isNaN(kp) ? '--' : kp.toFixed(1);
+    } else {
+      document.getElementById('kp').textContent = '--';
+    }
+  } catch(e) {
+    try {
+      const res2 = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+      const raw2 = await res2.json();
+      const rows2 = raw2.filter((r, i) => i > 0 && r[1] !== null && !isNaN(parseFloat(r[1])));
+      if (rows2.length > 0) {
+        const kp2 = parseFloat(rows2[rows2.length-1][1]);
+        document.getElementById('kp').textContent = isNaN(kp2) ? '--' : kp2.toFixed(1);
+      }
+    } catch(e2) { document.getElementById('kp').textContent = '--'; }
+  }
+}
+
+async function loadEpam() {
+  try {
+    const res = await fetch('data/epam.json');
+    const raw = await res.json();
+    const data = raw.filter((r, i) => i > 0 && r[0] !== null);
+    if (data.length < 2) throw new Error('no data');
+    
+    const latest = data[data.length - 1];
+    const prev = data[data.length - 6]; // 30分前
+    
+    // 列: [0]=time, [1]=status, [2]=... [7]=47-68keV_p, [9]=112-187keV_p
+    const ep = parseFloat(latest[7]);
+    const e2p = parseFloat(latest[9]);
+    const epPrev = parseFloat(prev[7]);
+    
+    if (!isNaN(ep)) {
+      document.getElementById('epam-ep').textContent = ep.toExponential(2);
+      document.getElementById('epam-e2p').textContent = isNaN(e2p) ? '--' : e2p.toExponential(2);
+      
+      const trend = ep > epPrev * 1.2 ? '↑ 上昇中' : ep < epPrev * 0.8 ? '↓ 下降中' : '→ 横ばい';
+      const trendColor = ep > epPrev * 1.2 ? 'var(--green)' : ep < epPrev * 0.8 ? 'var(--red)' : 'var(--muted)';
+      document.getElementById('epam-trend').innerHTML = `<span style="color:${trendColor}">${trend}</span>`;
+      
+      // 高水準かどうかの判定（一般的な閾値）
+      if (ep > 1000) {
+        document.getElementById('epam-status').innerHTML = '<span class="pill p-green">高水準</span>';
+        document.getElementById('epam-eps').textContent = '弾薬満タン。粘れ';
+      } else if (ep > 100) {
+        document.getElementById('epam-status').innerHTML = '<span class="pill p-amber">中水準</span>';
+        document.getElementById('epam-eps').textContent = 'ポテンシャルあり';
+      } else {
+        document.getElementById('epam-status').innerHTML = '<span class="pill p-muted">低水準</span>';
+        document.getElementById('epam-eps').textContent = '燃料少なめ';
+      }
+    }
+  } catch(e) {
+    document.getElementById('epam-ep').textContent = '--';
+    document.getElementById('epam-e2p').textContent = '--';
+    document.getElementById('epam-status').textContent = '--';
+  }
+}
+
+function updateClocks() {
+  const now = new Date();
+  const utcStr = now.toISOString().slice(11,16) + ' UTC';
+  document.getElementById('clock-utc').textContent = utcStr;
+  const localTime = new Date(now.getTime() + curLoc.tz * 3600000);
+  const localStr = '現地 ' + localTime.toISOString().slice(11,16) + ' ' + curLoc.tzName;
+  document.getElementById('clock-local').textContent = localStr;
 }
 
 async function loadAll() {
+  updateClocks();
   buildTimeline();
   buildMoon();
   buildHpHint();
-  await Promise.all([loadSolarWind(), loadKp()]);
+  await Promise.all([loadSolarWind(), loadKp(), loadHp(), loadEpam()]);
 }
 
 buildSelect();
 document.getElementById('loc-badge').textContent = `MLAT ${curLoc.mlat}°  MMT ${curLoc.mmt} ${curLoc.tzName}`;
 loadAll();
 setInterval(loadAll, 5 * 60 * 1000);
+setInterval(updateClocks, 30 * 1000);
 </script>
 </body>
 </html>
