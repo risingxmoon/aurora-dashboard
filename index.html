@@ -468,17 +468,29 @@ async function loadSolarWind() {
       fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json'),
       fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json')
     ]);
-    const mag = await magRes.json();
-    const plas = await plasRes.json();
+    const magRaw = await magRes.json();
+    const plasRaw = await plasRes.json();
+
+    // 先頭行はヘッダー行なのでスキップ
+    const mag = magRaw.slice(1).filter(r => r[0] !== null);
+    const plas = plasRaw.slice(1).filter(r => r[0] !== null);
+
+    if (mag.length === 0 || plas.length === 0) throw new Error('no data');
+
     const lm = mag[mag.length-1];
     const lp = plas[plas.length-1];
+
+    // mag列: [0]=time, [1]=Bx, [2]=By, [3]=Bz, [4]=Lon, [5]=Lat, [6]=Bt
+    // plas列: [0]=time, [1]=density, [2]=speed, [3]=temperature
     const bz = parseFloat(lm[3]);
     const bt = parseFloat(lm[6]);
     const speed = parseFloat(lp[2]);
 
+    if (isNaN(bz) || isNaN(speed)) throw new Error('invalid data');
+
     document.getElementById('bz').textContent = bz.toFixed(1)+' nT';
     document.getElementById('bzs').innerHTML = bz<=-10?'<span class="pill p-green">強い南向き</span>':bz<=-5?'<span class="pill p-amber">南向き</span>':bz>0?'<span class="pill p-red">北向き（閉）</span>':'<span class="pill p-muted">ほぼゼロ</span>';
-    document.getElementById('bt').textContent = bt.toFixed(1)+' nT';
+    document.getElementById('bt').textContent = isNaN(bt)?'--':bt.toFixed(1)+' nT';
     document.getElementById('bts').textContent = bt>=10?'強い（期待大）':bt>=5?'中程度':'弱い';
     document.getElementById('bts').style.color = bt>=10?'var(--green)':bt>=5?'var(--amber)':'var(--muted)';
     document.getElementById('spd').textContent = Math.round(speed)+' km/s';
@@ -491,6 +503,7 @@ async function loadSolarWind() {
     updateVerdict(bz);
     updateRetreat(bz, speed);
   } catch(e) {
+    console.error('Solar wind fetch error:', e);
     updateVerdict(null);
   }
 }
@@ -498,8 +511,10 @@ async function loadSolarWind() {
 async function loadKp() {
   try {
     const res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
-    const data = await res.json();
-    document.getElementById('kp').textContent = parseFloat(data[data.length-1][1]).toFixed(1);
+    const raw = await res.json();
+    const data = raw.slice(1).filter(r => r[1] !== null);
+    const kp = parseFloat(data[data.length-1][1]);
+    document.getElementById('kp').textContent = isNaN(kp) ? '--' : kp.toFixed(1);
   } catch(e) { document.getElementById('kp').textContent = '--'; }
 }
 
