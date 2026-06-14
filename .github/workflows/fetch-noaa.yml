@@ -35,9 +35,17 @@ jobs:
           curl -sf "https://services.swpc.noaa.gov/json/ace/epam/ace_epam_5m.json" \
             -o data/epam.json || echo "[]" > data/epam.json
 
-          # HP（半球電力）
-          curl -sf "https://services.swpc.noaa.gov/json/ovation_aurora_latest.json" \
-            -o data/ovation.json || echo "{}" > data/ovation.json
+          # HP（半球電力）- テキストファイルをパースしてJSONに変換
+          HP_TXT=$(curl -sf "https://services.swpc.noaa.gov/text/aurora-nowcast-hemi-power.txt" || echo "")
+          if [ -n "$HP_TXT" ]; then
+            LAST_LINE=$(echo "$HP_TXT" | grep -v '^#' | grep -v '^$' | tail -1)
+            NORTH_HP=$(echo "$LAST_LINE" | awk '{print $3}')
+            SOUTH_HP=$(echo "$LAST_LINE" | awk '{print $4}')
+            OBS_TIME=$(echo "$LAST_LINE" | awk '{print $1}')
+            echo "{\"north\":${NORTH_HP:-0},\"south\":${SOUTH_HP:-0},\"observed\":\"${OBS_TIME}\"}" > data/hp.json
+          else
+            echo "{\"north\":null,\"south\":null}" > data/hp.json
+          fi
 
           # 更新時刻を記録
           echo "{\"updated\": \"$(date -u +%Y-%m-%dT%H:%M:%SZ)\"}" > data/meta.json
