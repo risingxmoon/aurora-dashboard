@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revontulet Aurora Dashboard — @risingxmoonfoto</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0a0e1a;
+    --surface: #111827;
+    --surface2: #1a2235;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8eaf0;
+    --muted: #8892a4;
+    --hint: #4a5568;
+    --green: #22c55e;
+    --green-bg: rgba(34,197,94,0.12);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,0.12);
+    --red: #ef4444;
+    --red-bg: rgba(239,68,68,0.12);
+    --blue: #60a5fa;
+    --blue-bg: rgba(96,165,250,0.10);
+    --purple: #a78bfa;
+    --purple-bg: rgba(167,139,250,0.10);
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, 'Helvetica Neue', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    background: rgba(10,14,26,0.95);
+    backdrop-filter: blur(8px);
+    z-index: 10;
+  }
+  .logo { font-size: 15px; font-weight: 600; letter-spacing: 0.05em; color: var(--text); }
+  .logo span { color: var(--purple); }
+  .header-right { display: flex; align-items: center; gap: 10px; }
+  .update-time { font-size: 11px; color: var(--hint); }
+  .btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 13px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background .15s;
+  }
+  .btn:hover { background: #243050; }
+  .container { max-width: 900px; margin: 0 auto; padding: 1.5rem 1rem 3rem; }
+  .loc-row { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; flex-wrap: wrap; }
+  .loc-label { font-size: 12px; color: var(--muted); }
+  select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    cursor: pointer;
+    flex: 1;
+    max-width: 320px;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 99px;
+    background: var(--purple-bg);
+    color: var(--purple);
+    border: 1px solid rgba(167,139,250,0.2);
+    white-space: nowrap;
+  }
+  .verdict {
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    border: 1px solid transparent;
+  }
+  .v-good { background: var(--green-bg); border-color: rgba(34,197,94,0.25); }
+  .v-warn { background: var(--amber-bg); border-color: rgba(245,158,11,0.25); }
+  .v-bad  { background: var(--red-bg);   border-color: rgba(239,68,68,0.25); }
+  .v-idle { background: var(--surface);  border-color: var(--border); }
+  .v-title { font-size: 15px; font-weight: 600; margin-bottom: 3px; }
+  .v-good .v-title { color: var(--green); }
+  .v-warn .v-title { color: var(--amber); }
+  .v-bad  .v-title { color: var(--red); }
+  .v-idle .v-title { color: var(--muted); }
+  .v-body { font-size: 12px; color: var(--muted); }
+  .section-label { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--hint); margin-bottom: 8px; font-weight: 600; }
+  .g4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  .g3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  .g2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 1.25rem; }
+  @media(max-width:600px) {
+    .g4 { grid-template-columns: repeat(2,1fr); }
+    .g3 { grid-template-columns: repeat(2,1fr); }
+    .g2 { grid-template-columns: 1fr; }
+  }
+  .mc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: .875rem 1rem;
+  }
+  .ml { font-size: 11px; color: var(--muted); margin-bottom: 4px; }
+  .mv { font-size: 22px; font-weight: 600; color: var(--text); line-height: 1.2; }
+  .ms { font-size: 11px; margin-top: 4px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    letter-spacing: .03em;
+  }
+  .p-green { background: var(--green-bg); color: var(--green); }
+  .p-amber { background: var(--amber-bg); color: var(--amber); }
+  .p-red   { background: var(--red-bg);   color: var(--red); }
+  .p-blue  { background: var(--blue-bg);  color: var(--blue); }
+  .p-muted { background: rgba(255,255,255,0.06); color: var(--muted); }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+  .tl-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; font-size: 12px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  .tl-row:last-child { border-bottom: none; }
+  .tl-time { width: 48px; color: var(--muted); flex-shrink: 0; font-variant-numeric: tabular-nums; font-size: 11px; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .tl-label { flex: 1; color: var(--text); }
+  .tl-note { font-size: 10px; color: var(--hint); text-align: right; }
+  .tl-past { opacity: .35; }
+  .tl-next .tl-label { font-weight: 600; }
+  .chk-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+  .chk-row:last-child { border-bottom: none; }
+  .chk-label { color: var(--muted); }
+  .moon-icon { font-size: 28px; margin-bottom: 6px; }
+  .moon-name { font-size: 14px; font-weight: 600; margin-bottom: 2px; }
+  .moon-sub { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .footer { font-size: 10px; color: var(--hint); text-align: center; padding: 2rem 1rem 1rem; line-height: 1.8; }
+  .footer a { color: var(--purple); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">REVONTULET <span>Aurora Dashboard</span></div>
+  <div class="header-right">
+    <span class="update-time" id="update-time">--</span>
+    <button class="btn" onclick="loadAll()">↻ 更新</button>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="loc-row">
+    <span class="loc-label">観測地</span>
+    <select id="loc-sel" onchange="onLocChange()"></select>
+    <span class="badge" id="loc-badge">--</span>
+  </div>
+
+  <div class="verdict v-idle" id="verdict">
+    <div class="v-title">データ取得中...</div>
+    <div class="v-body">NOAAに接続しています</div>
+  </div>
+
+  <p class="section-label">リアルタイム宇宙天気（NOAA / SOLAR-1）</p>
+  <div class="g4">
+    <div class="mc"><div class="ml">Bz（磁場南北）</div><div class="mv" id="bz">--</div><div class="ms" id="bzs">--</div></div>
+    <div class="mc"><div class="ml">Bt（磁場総量）</div><div class="mv" id="bt">--</div><div class="ms" id="bts">--</div></div>
+    <div class="mc"><div class="ml">太陽風速度</div><div class="mv" id="spd">--</div><div class="ms" id="spds">--</div></div>
+    <div class="mc"><div class="ml">Kp指数</div><div class="mv" id="kp">--</div><div class="ms" style="color:var(--hint)">現場では参考程度</div></div>
+  </div>
+
+  <p class="section-label">Bzの推移（過去2時間）</p>
+  <div class="card" style="padding:.875rem 1rem">
+    <canvas id="bzChart" height="72"></canvas>
+  </div>
+
+  <hr class="divider">
+
+  <p class="section-label">今夜のタイムライン</p>
+  <div class="card" id="timeline"><div style="color:var(--muted);font-size:12px">計算中...</div></div>
+
+  <hr class="divider">
+
+  <div class="g3">
+    <div>
+      <p class="section-label">月齢・月の影響</p>
+      <div class="card" id="moon"><div style="color:var(--muted);font-size:12px">計算中...</div></div>
+    </div>
+    <div>
+      <p class="section-label">撤退判断</p>
+      <div class="card" id="retreat"><div style="color:var(--muted);font-size:12px">--</div></div>
+    </div>
+    <div>
+      <p class="section-label">低緯度HP目安</p>
+      <div class="card" id="hp-hint"><div style="color:var(--muted);font-size:12px">--</div></div>
+    </div>
+  </div>
+
+</div>
+
+<footer class="footer">
+  データ出典：<a href="https://www.swpc.noaa.gov/" target="_blank">NOAA / SWPC</a>（SOLAR-1・5分更新）　
+  制作：<a href="https://x.com/risingxmoonfoto" target="_blank">@risingxmoonfoto</a>　
+  本ダッシュボードは <em>Revontulet ―北欧オーロラハントガイド</em> の補助ツールです
+</footer>
+
+<script>
+const LOCS = [
+  {name:'イエローナイフ（カナダ）',lat:62.45,lon:-114.37,tz:-7,tzName:'MST',mlat:69,mmt:'23:30',hpMin:null,zone:'エース級'},
+  {name:'フェアバンクス（アラスカ）',lat:64.84,lon:-147.72,tz:-9,tzName:'AKST',mlat:65,mmt:'01:30',hpMin:null,zone:'エース級'},
+  {name:'チャーチル（カナダ）',lat:58.77,lon:-94.17,tz:-6,tzName:'CST',mlat:69,mmt:'00:30',hpMin:null,zone:'エース級'},
+  {name:'ホワイトホース（カナダ）',lat:60.72,lon:-135.05,tz:-8,tzName:'PST',mlat:64,mmt:'01:15',hpMin:null,zone:'エース級'},
+  {name:'ドーソンシティ（カナダ）',lat:64.06,lon:-139.43,tz:-8,tzName:'PST',mlat:65,mmt:'01:00',hpMin:null,zone:'エース級'},
+  {name:'トロムソ（ノルウェー）',lat:69.65,lon:18.95,tz:1,tzName:'CET',mlat:66,mmt:'00:45',hpMin:null,zone:'エース級'},
+  {name:'イナリ（フィンランド）',lat:68.91,lon:27.02,tz:2,tzName:'EET',mlat:66,mmt:'01:15',hpMin:null,zone:'エース級'},
+  {name:'レヴィ（フィンランド）',lat:67.80,lon:24.80,tz:2,tzName:'EET',mlat:64,mmt:'01:15',hpMin:null,zone:'エース級'},
+  {name:'キルナ（スウェーデン）',lat:67.86,lon:20.23,tz:1,tzName:'CET',mlat:65,mmt:'01:00',hpMin:null,zone:'エース級'},
+  {name:'レイネ（ロフォーテン）',lat:67.93,lon:13.09,tz:1,tzName:'CET',mlat:64,mmt:'00:30',hpMin:null,zone:'エース級'},
+  {name:'ロヴァニエミ（フィンランド）',lat:66.50,lon:25.73,tz:2,tzName:'EET',mlat:63,mmt:'01:15',hpMin:null,zone:'エース級'},
+  {name:'アークレイリ（アイスランド）',lat:65.68,lon:-18.09,tz:0,tzName:'GMT',mlat:62,mmt:'23:45',hpMin:null,zone:'エース級'},
+  {name:'レイキャビク（アイスランド）',lat:64.15,lon:-21.94,tz:0,tzName:'GMT',mlat:57,mmt:'23:45',hpMin:null,zone:'中緯度'},
+  {name:'ヴィーク（アイスランド）',lat:63.42,lon:-19.00,tz:0,tzName:'GMT',mlat:55,mmt:'23:45',hpMin:null,zone:'中緯度'},
+  {name:'イルリサット（グリーンランド）',lat:69.22,lon:-51.10,tz:-3,tzName:'WGT',mlat:76,mmt:'21:30',hpMin:null,zone:'オーバル内側'},
+  {name:'カンゲルルススアーク（グリーンランド）',lat:67.01,lon:-50.71,tz:-3,tzName:'WGT',mlat:73,mmt:'21:45',hpMin:null,zone:'オーバル内側'},
+  {name:'テカポ（ニュージーランド）',lat:-43.90,lon:170.50,tz:12,tzName:'NZST',mlat:-47,mmt:'23:45',hpMin:50,zone:'低緯度'},
+  {name:'クイーンズタウン（NZ）',lat:-45.03,lon:168.66,tz:12,tzName:'NZST',mlat:-58,mmt:'23:45',hpMin:40,zone:'低緯度'},
+  {name:'ダニーデン（NZ）',lat:-45.87,lon:170.50,tz:12,tzName:'NZST',mlat:-58,mmt:'23:45',hpMin:40,zone:'低緯度'},
+  {name:'インバカーギル（NZ）',lat:-46.41,lon:168.36,tz:12,tzName:'NZST',mlat:-59,mmt:'23:45',hpMin:35,zone:'低緯度'},
+  {name:'ホバート（タスマニア）',lat:-42.88,lon:147.33,tz:11,tzName:'AEDT',mlat:-55,mmt:'00:30',hpMin:45,zone:'低緯度'},
+  {name:'網走（日本）',lat:44.02,lon:144.27,tz:9,tzName:'JST',mlat:35,mmt:'23:30',hpMin:90,zone:'低緯度'},
+  {name:'釧路（日本）',lat:42.98,lon:144.38,tz:9,tzName:'JST',mlat:34,mmt:'23:30',hpMin:90,zone:'低緯度'},
+];
+
+let bzChart = null;
+let curLoc = LOCS.find(l => l.name.includes('テカポ'));
+
+function buildSelect() {
+  const sel = document.getElementById('loc-sel');
+  const groups = {};
+  LOCS.forEach(l => { if (!groups[l.zone]) groups[l.zone] = []; groups[l.zone].push(l); });
+  ['エース級','オーバル内側','中緯度','低緯度'].forEach(g => {
+    if (!groups[g]) return;
+    const og = document.createElement('optgroup');
+    og.label = g;
+    groups[g].forEach(l => {
+      const o = document.createElement('option');
+      o.value = LOCS.indexOf(l);
+      o.textContent = l.name;
+      if (l === curLoc) o.selected = true;
+      og.appendChild(o);
+    });
+    sel.appendChild(og);
+  });
+}
+
+function onLocChange() {
+  curLoc = LOCS[parseInt(document.getElementById('loc-sel').value)];
+  document.getElementById('loc-badge').textContent = `MLAT ${curLoc.mlat}°  MMT ${curLoc.mmt} ${curLoc.tzName}`;
+  buildTimeline();
+  buildMoon();
+  buildHpHint();
+}
+
+function sunAlt(date, lat, lon) {
+  const d = date.getTime()/86400000 - 10957;
+  const g = (357.529+0.98560028*d)*Math.PI/180;
+  const q = 280.459+0.98564736*d;
+  const L = (q+1.915*Math.sin(g)+0.020*Math.sin(2*g))*Math.PI/180;
+  const e = 23.439*Math.PI/180;
+  const dec = Math.asin(Math.sin(e)*Math.sin(L));
+  const RA = Math.atan2(Math.cos(e)*Math.sin(L),Math.cos(L));
+  const GMST = (6.697375+0.0657098242*d+(date.getUTCHours()+date.getUTCMinutes()/60))*15*Math.PI/180;
+  const HA = GMST+lon*Math.PI/180-RA;
+  const latR = lat*Math.PI/180;
+  return Math.asin(Math.sin(latR)*Math.sin(dec)+Math.cos(latR)*Math.cos(dec)*Math.cos(HA))*180/Math.PI;
+}
+
+function findEvent(base, lat, lon, tgt, rising) {
+  let lo=0, hi=86400;
+  for (let i=0; i<50; i++) {
+    const mid=(lo+hi)/2;
+    const a = sunAlt(new Date(base.getTime()+mid*1000), lat, lon);
+    if (rising ? a<tgt : a>tgt) lo=mid; else hi=mid;
+  }
+  return new Date(base.getTime()+((lo+hi)/2)*1000);
+}
+
+function fmtLocal(utc, tz) {
+  const l = new Date(utc.getTime()+tz*3600000);
+  return l.toISOString().slice(11,16);
+}
+
+function getMoonPhase(date) {
+  const diff=(date-new Date(Date.UTC(2000,0,6,18,14)))/(29.530588853*86400000);
+  const phase=diff-Math.floor(diff);
+  const age=phase*29.53;
+  const illum=Math.round((1-Math.cos(phase*2*Math.PI))/2*100);
+  const icons=['🌑','🌒','🌒','🌓','🌔','🌔','🌕','🌖','🌖','🌗','🌘','🌘'];
+  const names=['新月','三日月','三日月','上弦','十三夜','十三夜','満月','十六夜','十六夜','下弦','有明月','有明月'];
+  const idx=Math.min(Math.floor(phase*12),11);
+  return {age:age.toFixed(1),illum,name:names[idx],icon:icons[idx]};
+}
+
+function buildTimeline() {
+  const l = curLoc;
+  const now = new Date();
+  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth(),now.getUTCDate()));
+  const tmrUTC = new Date(todayUTC.getTime()+86400000);
+
+  const civilDusk  = findEvent(todayUTC, l.lat, l.lon, -6, false);
+  const nautDusk   = findEvent(todayUTC, l.lat, l.lon, -12, false);
+  const astroDusk  = findEvent(todayUTC, l.lat, l.lon, -18, false);
+  const astroRise  = findEvent(tmrUTC,   l.lat, l.lon, -18, true);
+  const nautRise   = findEvent(tmrUTC,   l.lat, l.lon, -12, true);
+  const sunrise    = findEvent(tmrUTC,   l.lat, l.lon, -0.833, true);
+
+  const [mmtH,mmtM] = l.mmt.split(':').map(Number);
+  const mmtUTC = new Date(todayUTC.getTime()+((mmtH+mmtM/60-l.tz+48)%24)*3600000);
+
+  const phase = getMoonPhase(now);
+  const moonOffH = (parseFloat(phase.age)/29.53)*24;
+  const moonRiseUTC = new Date(todayUTC.getTime()+((moonOffH+6)%24)*3600000);
+
+  const events = [
+    {t:civilDusk,  label:'市民薄暮終了',      color:'#f59e0b', note:'空が暗くなり始める'},
+    {t:nautDusk,   label:'航海薄暮終了',      color:'#60a5fa', note:'薄青い空'},
+    {t:astroDusk,  label:'天文薄暮終了 ★',   color:'#818cf8', note:'撮影ゾーン開始'},
+    {t:mmtUTC,     label:'MMT（磁気真夜中）★★', color:'#a78bfa', note:'ブレイクアップ最多時間帯'},
+    {t:astroRise,  label:'天文薄明開始',      color:'#818cf8', note:'撮影ゾーン終了'},
+    {t:nautRise,   label:'航海薄明開始',      color:'#60a5fa', note:''},
+    {t:sunrise,    label:'日の出',            color:'#f59e0b', note:''},
+    {t:moonRiseUTC,label:'月の出',            color:'#94a3b8', note:`月齢${phase.age}日 照度${phase.illum}%`},
+  ].sort((a,b)=>a.t-b.t);
+
+  const nextIdx = events.findIndex(e=>e.t>now);
+  let html = '';
+  events.forEach((ev,i) => {
+    const past = ev.t < now;
+    const isNext = i === nextIdx;
+    const cls = past ? 'tl-past' : isNext ? 'tl-next' : '';
+    html += `<div class="tl-row ${cls}">
+      <span class="tl-time">${fmtLocal(ev.t, l.tz)}</span>
+      <div class="tl-dot" style="background:${ev.color};${isNext?'box-shadow:0 0 0 3px '+ev.color+'33':''}"></div>
+      <span class="tl-label">${ev.label}</span>
+      <span class="tl-note">${ev.note}</span>
+    </div>`;
+  });
+  document.getElementById('timeline').innerHTML = html;
+}
+
+function buildMoon() {
+  const phase = getMoonPhase(new Date());
+  let cls, msg;
+  if (phase.illum < 20) { cls='p-green'; msg='影響小。暗い空を楽しめます'; }
+  else if (phase.illum < 60) { cls='p-blue'; msg='月明かりあり。色が見えやすい'; }
+  else { cls='p-amber'; msg='明るい月夜。風景とのコラボが美しい'; }
+  document.getElementById('moon').innerHTML = `
+    <div class="moon-icon">${phase.icon}</div>
+    <div class="moon-name">${phase.name}（月齢 ${phase.age}日）</div>
+    <div class="moon-sub">照度 ${phase.illum}%</div>
+    <span class="pill ${cls}">${msg}</span>
+  `;
+}
+
+function buildHpHint() {
+  const l = curLoc;
+  const box = document.getElementById('hp-hint');
+  if (!l.hpMin) {
+    box.innerHTML = `<div style="font-size:13px;font-weight:600;margin-bottom:6px">オーロラ帯（${l.zone}）</div>
+    <div style="font-size:11px;color:var(--muted)">MLAT ${l.mlat}°<br>通常活動でもオーロラが頭上に見える特等席。HP 20GW以上で本格化。</div>`;
+  } else {
+    box.innerHTML = `<div style="font-size:13px;font-weight:600;margin-bottom:6px">低緯度観測</div>
+    <div style="font-size:11px;color:var(--muted)">MLAT ${l.mlat}°<br>必要HP目安：</div>
+    <div style="font-size:20px;font-weight:600;color:var(--purple);margin:4px 0">${l.hpMin} <span style="font-size:12px;font-weight:400;color:var(--muted)">GW以上</span></div>
+    <div style="font-size:11px;color:var(--hint)">大規模磁気嵐（G3以上）が条件。<br>${l.lat<0?'南':'北'}の地平線低空を狙う。</div>`;
+  }
+}
+
+function updateVerdict(bz) {
+  const box = document.getElementById('verdict');
+  if (bz === null) {
+    box.className = 'verdict v-idle';
+    box.innerHTML = '<div class="v-title">データを取得できませんでした</div><div class="v-body">更新ボタンを押すか、直接 spaceweatherlive.com を確認してください。</div>';
+    return;
+  }
+  if (bz <= -10) {
+    box.className = 'verdict v-good';
+    box.innerHTML = `<div class="v-title">今夜は期待大。現地へ出よう</div><div class="v-body">Bz ${bz.toFixed(1)} nT（強い南向き）。地球のバリアが大きく開いています。MMTに向けて今すぐポイントへ移動してください。</div>`;
+  } else if (bz <= -5) {
+    box.className = 'verdict v-warn';
+    box.innerHTML = `<div class="v-title">可能性あり。データを注視して</div><div class="v-body">Bz ${bz.toFixed(1)} nT（南向き）。活動が始まりつつあります。Windyで雲を確認しながら待機してください。</div>`;
+  } else if (bz > 0) {
+    box.className = 'verdict v-bad';
+    box.innerHTML = `<div class="v-title">今は静穏。突発的な南転に注意</div><div class="v-body">Bz ${bz.toFixed(1)} nT（北向き）。バリアは閉じています。EPAMも確認し、突発的な変化に備えてください。</div>`;
+  } else {
+    box.className = 'verdict v-idle';
+    box.innerHTML = `<div class="v-title">様子見。Bzの動きに注目</div><div class="v-body">Bz ${bz.toFixed(1)} nT（ほぼゼロ）。急変する可能性があります。SpaceWeatherLiveで継続監視してください。</div>`;
+  }
+}
+
+function updateRetreat(bz, speed) {
+  const checks = [
+    {label:'Bzが -5nT 以下', ok: bz <= -5, g:'期待あり', b:'静穏'},
+    {label:'太陽風 500km/s 超', ok: speed >= 500, g:'高速風あり', b:'通常速度'},
+    {label:'まだ粘るべきか', ok: bz <= -3 || speed >= 450, g:'粘れ', b:'撤退を検討'},
+  ];
+  document.getElementById('retreat').innerHTML = checks.map(c =>
+    `<div class="chk-row"><span class="chk-label">${c.label}</span><span class="pill ${c.ok?'p-green':'p-red'}">${c.ok?c.g:c.b}</span></div>`
+  ).join('');
+}
+
+function drawChart(times, values) {
+  const ctx = document.getElementById('bzChart').getContext('2d');
+  if (bzChart) bzChart.destroy();
+  bzChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: times,
+      datasets: [{
+        data: values,
+        backgroundColor: values.map(v => v <= -10 ? '#22c55e' : v <= -5 ? '#f59e0b' : v > 0 ? '#ef4444' : '#4a5568'),
+        borderRadius: 2,
+        barThickness: 'flex',
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Bz: ${c.raw.toFixed(1)} nT` } } },
+      scales: {
+        x: { ticks: { font:{size:9}, color:'#4a5568', maxTicksLimit:8, maxRotation:0 }, grid: { color:'rgba(255,255,255,0.04)' } },
+        y: { ticks: { font:{size:9}, color:'#4a5568' }, grid: { color:'rgba(255,255,255,0.04)' },
+             title: { display:true, text:'nT', font:{size:9}, color:'#4a5568' } }
+      }
+    }
+  });
+}
+
+async function loadSolarWind() {
+  try {
+    const [magRes, plasRes] = await Promise.all([
+      fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json'),
+      fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json')
+    ]);
+    const mag = await magRes.json();
+    const plas = await plasRes.json();
+    const lm = mag[mag.length-1];
+    const lp = plas[plas.length-1];
+    const bz = parseFloat(lm[3]);
+    const bt = parseFloat(lm[6]);
+    const speed = parseFloat(lp[2]);
+
+    document.getElementById('bz').textContent = bz.toFixed(1)+' nT';
+    document.getElementById('bzs').innerHTML = bz<=-10?'<span class="pill p-green">強い南向き</span>':bz<=-5?'<span class="pill p-amber">南向き</span>':bz>0?'<span class="pill p-red">北向き（閉）</span>':'<span class="pill p-muted">ほぼゼロ</span>';
+    document.getElementById('bt').textContent = bt.toFixed(1)+' nT';
+    document.getElementById('bts').textContent = bt>=10?'強い（期待大）':bt>=5?'中程度':'弱い';
+    document.getElementById('bts').style.color = bt>=10?'var(--green)':bt>=5?'var(--amber)':'var(--muted)';
+    document.getElementById('spd').textContent = Math.round(speed)+' km/s';
+    document.getElementById('spds').textContent = speed>=600?'高速風（コロナホール）':speed>=500?'やや高速':'通常速度';
+    document.getElementById('spds').style.color = speed>=500?'var(--amber)':'var(--muted)';
+    document.getElementById('update-time').textContent = '更新：'+lm[0].slice(11,16)+' UTC';
+
+    const hist = mag.slice(-24).map(r=>({t:r[0].slice(11,16),v:parseFloat(r[3])})).filter(r=>!isNaN(r.v));
+    drawChart(hist.map(r=>r.t), hist.map(r=>r.v));
+    updateVerdict(bz);
+    updateRetreat(bz, speed);
+  } catch(e) {
+    updateVerdict(null);
+  }
+}
+
+async function loadKp() {
+  try {
+    const res = await fetch('https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json');
+    const data = await res.json();
+    document.getElementById('kp').textContent = parseFloat(data[data.length-1][1]).toFixed(1);
+  } catch(e) { document.getElementById('kp').textContent = '--'; }
+}
+
+async function loadAll() {
+  buildTimeline();
+  buildMoon();
+  buildHpHint();
+  await Promise.all([loadSolarWind(), loadKp()]);
+}
+
+buildSelect();
+document.getElementById('loc-badge').textContent = `MLAT ${curLoc.mlat}°  MMT ${curLoc.mmt} ${curLoc.tzName}`;
+loadAll();
+setInterval(loadAll, 5 * 60 * 1000);
+</script>
+</body>
+</html>
