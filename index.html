@@ -244,34 +244,27 @@
   <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:8px">
     <div>
       <p class="section-label">GOES Magnetometer（地球磁場）</p>
-      <div class="card" style="padding:.5rem">
-        <a href="https://www.swpc.noaa.gov/products/goes-magnetometer" target="_blank">
-          <img src="data/goes-mag.gif"
-               alt="GOES Magnetometer 24h"
-               style="width:100%;border-radius:6px"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-          <div style="display:none;padding:.5rem;font-size:12px;color:var(--hint)">
-            画像取得中... <a href="https://www.swpc.noaa.gov/products/goes-magnetometer" target="_blank" style="color:var(--purple)">NOAAで確認 →</a>
-          </div>
-        </a>
-        <div style="font-size:10px;color:var(--hint);margin-top:4px">Midnight付近で青/赤ラインが急降下→ブレイクアップ前兆。青=GOES-East（カナダ）赤=GOES-West（アラスカ）</div>
-        <div style="font-size:10px;color:var(--hint);margin-top:2px">出典：NOAA/SWPC</div>
+      <div class="card" style="padding:.75rem">
+        <canvas id="goesMagChart" height="120" style="width:100%"></canvas>
+        <div style="font-size:10px;color:var(--hint);margin-top:6px">Midnight付近で青/赤ラインが急降下→ブレイクアップ前兆。青=GOES-East（カナダ）赤=GOES-West（アラスカ）</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">出典：NOAA/SWPC　<a href="https://www.swpc.noaa.gov/products/goes-magnetometer" target="_blank" style="color:var(--purple)">NOAAで詳細確認 →</a></div>
       </div>
     </div>
     <div>
-      <p class="section-label">キルナ地磁気（北欧チェイス用）</p>
+      <p class="section-label">トロムソ地磁気（北欧チェイス用）</p>
       <div class="card" style="padding:.5rem">
-        <a href="https://www.irf.se/Observatory/?link=Magnetometers" target="_blank">
-          <img src="data/kiruna-mag.png"
-               alt="Kiruna Magnetometer"
+        <a href="https://flux.phys.uit.no/Last24/" target="_blank">
+          <img src="data/tromso-mag.gif"
+               id="tromso-img"
+               alt="Tromsø Magnetometer"
                style="width:100%;border-radius:6px"
-               onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-          <div style="display:none;padding:.5rem;font-size:12px;color:var(--hint)">
-            画像取得中... <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank" style="color:var(--purple)">SpaceWeatherLiveで確認 →</a>
-          </div>
+               onerror="this.style.display='none';document.getElementById('tromso-fallback').style.display='block'">
         </a>
+        <div id="tromso-fallback" style="display:none;padding:.5rem">
+          <a href="https://flux.phys.uit.no/Last24/" target="_blank" style="color:var(--purple);font-size:12px">TGO（トロムソ地球物理観測所）で確認 →</a>
+        </div>
         <div style="font-size:10px;color:var(--hint);margin-top:4px">激しいトゲトゲ→ブレイクアップ中。滑らかな波→終了の合図</div>
-        <div style="font-size:10px;color:var(--hint);margin-top:2px">出典：IRF Kiruna / SpaceWeatherLive</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">出典：TGO / UiT The Arctic University of Norway</div>
       </div>
     </div>
   </div>
@@ -283,23 +276,55 @@
           <img src="data/hobart-mag.gif"
                alt="Hobart Magnetometer"
                style="width:100%;border-radius:6px"
-               onerror="this.parentElement.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.sws.bom.gov.au/Images/Geophysical/Latest%20Conditions/Magnetograms/Hobart.gif target=_blank style=color:var(--purple);font-size:12px>Geoscience Australiaで確認 →</a></div>'">
+               onerror="this.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html target=_blank style=color:var(--purple);font-size:12px>SpaceWeatherLiveで確認 →</a></div>'">
         </a>
         <div style="font-size:10px;color:var(--hint);margin-top:4px">テカポ・クイーンズタウンチェイス時に参照。南半球はトゲが上向きになることも</div>
         <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com / Geoscience Australia</div>
       </div>
     </div>
     <div>
-      <p class="section-label">ヨーロッパ スタックプロット</p>
+      <p class="section-label">NZ地磁気 Eyrewell（NZチェイス用）</p>
+      <div class="card" style="padding:.75rem">
+        <canvas id="nzMagChart" height="120" style="width:100%"></canvas>
+        <div style="font-size:10px;color:var(--hint);margin-top:6px">Eyrewell観測所（クライストチャーチ近郊）。激しい変動→NZでオーロラチャンス</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">出典：MANA Network / University of Otago　<a href="https://solartsunamis.otago.ac.nz/mana/data/" target="_blank" style="color:var(--purple)">詳細 →</a></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-bottom:1.25rem">
+    <div>
+      <p class="section-label">キルナ・ヨーロッパ地磁気</p>
+      <div class="card" style="padding:.75rem">
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank"
+             style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
+            <span style="font-size:13px;font-weight:600">🧲 Kiruna Magnetometer</span>
+            <span style="font-size:11px;color:var(--purple)">開く →</span>
+          </a>
+          <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank"
+             style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
+            <span style="font-size:13px;font-weight:600">🌍 ヨーロッパ スタックプロット</span>
+            <span style="font-size:11px;color:var(--purple)">開く →</span>
+          </a>
+          <a href="https://flux.phys.uit.no/Last24/" target="_blank"
+             style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--surface2);border-radius:var(--radius-sm);color:var(--text);text-decoration:none;border:1px solid var(--border)">
+            <span style="font-size:13px;font-weight:600">📡 TGO リアルタイム地磁気</span>
+            <span style="font-size:11px;color:var(--purple)">開く →</span>
+          </a>
+        </div>
+      </div>
+    </div>
+    <div>
+      <p class="section-label">ヨーロッパ スタックプロット（画像）</p>
       <div class="card" style="padding:.5rem">
         <a href="https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html" target="_blank">
           <img src="data/eu-stackplot.gif"
                alt="Europe Magnetometer Stackplot"
                style="width:100%;border-radius:6px"
-               onerror="this.parentElement.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html target=_blank style=color:var(--purple);font-size:12px>SpaceWeatherLiveで確認 →</a></div>'">
+               onerror="this.parentElement.innerHTML='<div style=padding:.5rem><a href=https://www.spaceweatherlive.com/en/auroral-activity/magnetometers.html target=_blank style=color:var(--purple);font-size:12px>SpaceWeatherLiveで確認 →</a></div>'">
         </a>
-        <div style="font-size:10px;color:var(--hint);margin-top:4px">北から南の順。DOBやSOLが反応したら中緯度ヨーロッパでもチャンス</div>
-        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com / TGO・DTU・FMI</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:4px">北から南の順。中緯度観測所が反応したら中緯度ヨーロッパでもチャンス</div>
+        <div style="font-size:10px;color:var(--hint);margin-top:2px">Credit: SpaceWeatherLive.com</div>
       </div>
     </div>
   </div>
@@ -798,6 +823,131 @@ async function loadEpam() {
   }
 }
 
+async function loadGoesMag() {
+  const canvas = document.getElementById('goesMagChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  try {
+    const [primaryRes, secondaryRes] = await Promise.all([
+      fetch('data/goes-mag-primary.json'),
+      fetch('data/goes-mag-secondary.json')
+    ]);
+    const primary = await primaryRes.json();
+    const secondary = await secondaryRes.json();
+    
+    if (!primary.length || !secondary.length) throw new Error('no data');
+    
+    // Hp成分のみ抽出（過去24時間）
+    const parseEntry = (d) => ({
+      t: d.time_tag,
+      hp: parseFloat(d.Hp)
+    });
+    
+    const pData = primary.filter(d => d.Hp !== null).map(parseEntry).slice(-288);
+    const sData = secondary.filter(d => d.Hp !== null).map(parseEntry).slice(-288);
+    
+    const labels = pData.map(d => d.t.slice(11,16));
+    
+    if (window.goesMagChartInstance) window.goesMagChartInstance.destroy();
+    window.goesMagChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [
+          {
+            label: 'GOES-East (Hp)',
+            data: pData.map(d => d.hp),
+            borderColor: '#60a5fa',
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.2
+          },
+          {
+            label: 'GOES-West (Hp)',
+            data: sData.map((d,i) => sData[i]?.hp ?? null),
+            borderColor: '#ef4444',
+            backgroundColor: 'transparent',
+            borderWidth: 1.5,
+            pointRadius: 0,
+            tension: 0.2
+          }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { font: { size: 10 }, color: '#4a5568' } },
+          tooltip: { callbacks: { label: c => `${c.dataset.label}: ${c.raw?.toFixed(1)} nT` } }
+        },
+        scales: {
+          x: { ticks: { font:{size:9}, color:'#4a5568', maxTicksLimit:8, maxRotation:0 }, grid: { color:'rgba(255,255,255,0.04)' } },
+          y: { ticks: { font:{size:9}, color:'#4a5568' }, grid: { color:'rgba(255,255,255,0.04)' },
+               title: { display:true, text:'Hp (nT)', font:{size:9}, color:'#4a5568' } }
+        }
+      }
+    });
+  } catch(e) {
+    ctx.fillStyle = '#4a5568';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('データ取得中...', 10, 60);
+  }
+}
+
+async function loadNzMag() {
+  const canvas = document.getElementById('nzMagChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  try {
+    const res = await fetch('data/nz-eyrewell.txt');
+    const text = await res.text();
+    
+    const lines = text.trim().split('\n').filter(l => !l.startsWith('#') && l.trim());
+    // フォーマット: Date Time(UTC) H(nT) ...
+    const parsed = lines.slice(-288).map(line => {
+      const parts = line.trim().split(/\s+/);
+      return { t: parts[1] ? parts[1].slice(0,5) : '--', h: parseFloat(parts[2]) };
+    }).filter(d => !isNaN(d.h));
+    
+    if (!parsed.length) throw new Error('no data');
+    
+    if (window.nzMagChartInstance) window.nzMagChartInstance.destroy();
+    window.nzMagChartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: parsed.map(d => d.t),
+        datasets: [{
+          label: 'Eyrewell H (nT)',
+          data: parsed.map(d => d.h),
+          borderColor: '#22c55e',
+          backgroundColor: 'transparent',
+          borderWidth: 1.5,
+          pointRadius: 0,
+          tension: 0.2
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { labels: { font:{size:10}, color:'#4a5568' } },
+          tooltip: { callbacks: { label: c => `H: ${c.raw?.toFixed(1)} nT` } }
+        },
+        scales: {
+          x: { ticks: { font:{size:9}, color:'#4a5568', maxTicksLimit:8, maxRotation:0 }, grid: { color:'rgba(255,255,255,0.04)' } },
+          y: { ticks: { font:{size:9}, color:'#4a5568' }, grid: { color:'rgba(255,255,255,0.04)' },
+               title: { display:true, text:'H (nT)', font:{size:9}, color:'#4a5568' } }
+        }
+      }
+    });
+  } catch(e) {
+    ctx.fillStyle = '#4a5568';
+    ctx.font = '12px sans-serif';
+    ctx.fillText('データ取得中...', 10, 60);
+  }
+}
+
 function updateClocks() {
   const now = new Date();
   const utcStr = now.toISOString().slice(11,16) + ' UTC';
@@ -823,7 +973,7 @@ async function loadAll() {
   buildTimeline();
   buildMoon();
   buildHpHint();
-  await Promise.all([loadSolarWind(), loadKp(), loadHp(), loadEpam()]);
+  await Promise.all([loadSolarWind(), loadKp(), loadHp(), loadEpam(), loadGoesMag(), loadNzMag()]);
 }
 
 buildSelect();
