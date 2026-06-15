@@ -200,7 +200,7 @@
     <div class="mc"><div class="ml">Kp指数</div><div class="mv" id="kp">--</div><div class="ms" style="color:var(--hint)">現場では参考程度</div></div>
   </div>
 
-  <p class="section-label">太陽風データ（過去2時間）</p>
+  <p class="section-label">太陽風データ（過去6時間・UTC表示）</p>
   <div class="card" style="padding:.875rem 1rem;margin-bottom:.75rem">
     <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Bz（磁場南北） <span style="color:var(--hint);font-size:10px">— 縦線：現在地球に届いているデータ</span></div>
     <div style="position:relative;height:160px"><canvas id="bzChart"></canvas></div>
@@ -218,12 +218,12 @@
     <div style="position:relative;height:160px"><canvas id="spdChart"></canvas></div>
   </div>
 
-  <p class="section-label">HP（半球電力）推移（過去6時間） <span style="font-size:10px;color:var(--hint)">— 縦線：地球到達推定（+45分）</span></p>
+  <p class="section-label">HP（半球電力）推移（過去6時間・UTC表示） <span style="font-size:10px;color:var(--hint)">— 縦線：地球到達推定（+45分）</span></p>
   <div class="card" style="padding:.875rem 1rem;margin-bottom:1.25rem">
     <div style="position:relative;height:160px"><canvas id="hpChart"></canvas></div>
   </div>
 
-  <p class="section-label">Kp指数（過去24時間）</p>
+  <p class="section-label">Kp指数（過去24時間・UTC表示）</p>
   <div class="card" style="padding:.875rem 1rem;margin-bottom:1.25rem">
     <div style="position:relative;height:160px"><canvas id="kpChart"></canvas></div>
   </div>
@@ -388,7 +388,7 @@ const LOCS = [
 ];
 
 let bzChart = null, btChart = null, densChart = null, spdChart = null, hpChart = null, kpChart = null;
-let curLoc = LOCS.find(l => l.name.includes('テカポ'));
+let curLoc = LOCS[0]; // デフォルト: イエローナイフ
 
 function buildSelect() {
   const sel = document.getElementById('loc-sel');
@@ -409,13 +409,14 @@ function buildSelect() {
   });
 }
 
-function onLocChange() {
+async function onLocChange() {
   curLoc = LOCS[parseInt(document.getElementById('loc-sel').value)];
   document.getElementById('loc-badge').textContent = `MLAT ${curLoc.mlat}°  MMT ${curLoc.mmt} ${curLoc.tzName}`;
   buildTimeline();
   buildMoon();
   buildHpHint();
-  loadAll();
+  updateClocks();
+  await loadAll();
 }
 
 function sunAlt(date, lat, lon) {
@@ -646,7 +647,14 @@ function makeChartOptions(yLabel, tooltipFn, yMin, yMax, gridLabels) {
             const label = this.getLabelForValue(val);
             if (!label) return '';
             const mins = parseInt(label.slice(3,5));
-            return (mins === 0 || mins === 30) ? label : '';
+            if (!(mins === 0 || mins === 30)) return '';
+            // 左端（最初の30分刻み）にはUTCを付ける
+            const allLabels = this.chart.data.labels;
+            const firstHalf = allLabels.find(l => {
+              const m = parseInt(l.slice(3,5));
+              return m === 0 || m === 30;
+            });
+            return label === firstHalf ? label + '(UTC)' : label;
           }
         },
         grid: {
@@ -735,7 +743,7 @@ function normalizeToGrid(rawTimes, rawValues, totalMins, tzOffset, stepMins) {
     return best;
   });
 
-  return { labels, values, utcLabels };
+  return { labels: utcLabels, values, utcLabels };
 }
 
 // 地球到達ライン付き縦線アノテーションをデータセットで代替（annotation plugin不要）
