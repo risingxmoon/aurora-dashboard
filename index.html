@@ -681,46 +681,56 @@ function getHalfHourLabels(times) {
 function normalizeToGrid(rawTimes, rawValues, totalMins, tzOffset, stepMins) {
   const tz = (tzOffset !== undefined) ? tzOffset : 0;
   const step = stepMins || 1;
+  const totalSteps = Math.ceil(totalMins / step);
 
   // 右端 = 現在UTC時刻（分）
   const now = new Date();
   const nowUtcMins = now.getUTCHours() * 60 + now.getUTCMinutes();
 
-  // グリッド生成（古い順、step分刻み）
-  const totalSteps = Math.ceil(totalMins / step);
-  const utcLabels = [];
-  const labels = [];
+  // 実データをUTCキー(HH:MM)でマッピング
+  const dataMap = new Map();
+  rawTimes.forEach((t, i) => {
+    if (!t) return;
+    // "HH:MM" または "YYYY-MM-DD HH:MM:..." から HH:MM を抽出
+    const hhmm = t.length > 5 ? t.slice(11, 16) : t;
+    dataMap.set(hhmm, rawValues[i]);
+  });
+
+  // グリッド生成（古い順）: UTC時刻でマッチング、ローカル時刻でラベル表示
+  const labels = [];   // 表示用（ローカル時刻）
+  const utcLabels = []; // マッチング用（UTC）
   for (let i = totalSteps - 1; i >= 0; i--) {
-    const utcMins = ((nowUtcMins - i * step) + 1440) % 1440;
-    const localMins = ((utcMins + tz * 60) + 1440 * 2) % 1440;
+    const utcTotalMins = nowUtcMins - i * step;
+    const utcMins = ((utcTotalMins % 1440) + 1440) % 1440;
+    // ローカル時刻 = UTC + tzOffset時間
+    const localTotalMins = utcTotalMins + tz * 60;
+    const localMins = ((localTotalMins % 1440) + 1440) % 1440;
     const uh = String(Math.floor(utcMins / 60)).padStart(2, '0');
     const um = String(utcMins % 60).padStart(2, '0');
-    const lhh = String(Math.floor(localMins / 60)).padStart(2, '0');
-    const lmm = String(localMins % 60).padStart(2, '0');
+    const lh = String(Math.floor(localMins / 60)).padStart(2, '0');
+    const lm = String(localMins % 60).padStart(2, '0');
     utcLabels.push(uh + ':' + um);
-    labels.push(lhh + ':' + lmm);
+    labels.push(lh + ':' + lm);
   }
 
-  // 実データをUTCキーでマッピング
-  const dataMap = new Map();
-  rawTimes.forEach((t, i) => { if (t) dataMap.set(t, rawValues[i]); });
-
-  // step>1の場合、グリッド時刻±(step/2)分以内のデータをマッチング
+  // データをUTCグリッドにマッピング
   const values = utcLabels.map(ul => {
     if (step === 1) {
       const v = dataMap.get(ul);
-      return (v !== undefined && v !== null && !isNaN(v)) ? v : null;
+      return (v !== undefined && v !== null && !isNaN(Number(v))) ? Number(v) : null;
     }
-    // 5分刻み等: ±2分以内で最近傍マッチ
-    const [uh, um] = ul.split(':').map(Number);
-    const ulMins = uh * 60 + um;
-    let best = null, bestDiff = step;
+    // 5分刻み: ±(step/2)分以内で最近傍マッチ
+    const [uh, um2] = ul.split(':').map(Number);
+    const ulMins = uh * 60 + um2;
+    let best = null, bestDiff = Math.floor(step / 2) + 1;
     dataMap.forEach((v, key) => {
       const [kh, km] = key.split(':').map(Number);
       const kMins = kh * 60 + km;
       let diff = Math.abs(kMins - ulMins);
       if (diff > 720) diff = 1440 - diff;
-      if (diff <= bestDiff && v !== null && !isNaN(v)) { best = v; bestDiff = diff; }
+      if (diff < bestDiff && v !== null && !isNaN(Number(v))) {
+        best = Number(v); bestDiff = diff;
+      }
     });
     return best;
   });
@@ -869,10 +879,7 @@ function drawKpChart(times, values) {
 function drawHpChart(times, values, isSouth, tzOffset) {
   const ctx = document.getElementById('hpChart').getContext('2d');
   if (hpChart) hpChart.destroy();
-  // +45分後のインデックスを探す（HPは5分刻み → 9ステップ後）
-  const arrivalSteps = 9; // 45分 / 5分
-  const arrivalIdx = Math.max(0, times.length - 1 - arrivalSteps);
-  const arrivalPlugin = makeArrivalPlugin(hpArrivalIdx, '#a78bfa');
+
   // HPを等間隔グリッドに正規化（5分刻み×72点=6時間、右端=現在時刻）
   const hpGrid = normalizeToGrid(times, values, 360, tzOffset, 5);
   const hpTimes = hpGrid.labels;
@@ -882,8 +889,9 @@ function drawHpChart(times, values, isSouth, tzOffset) {
   const hpMax = validHp.length ? Math.max(...validHp) : 100;
   const yMaxHp = Math.max(100, Math.ceil(hpMax * 1.2));
 
-  // +45分固定ライン: 右端から45分前 = 右端から9ステップ前
+  // +45分固定ライン: グリッドは1stepMins=5分刻み、右端から9ステップ前
   const hpArrivalIdx = Math.max(0, hpTimes.length - 1 - 9);
+  const arrivalPlugin = makeArrivalPlugin(hpArrivalIdx, '#a78bfa');
 
   hpChart = new Chart(ctx, {
     type: 'line',
@@ -897,6 +905,7 @@ function drawHpChart(times, values, isSouth, tzOffset) {
         pointRadius: 0,
         tension: 0.3,
         fill: true,
+        spanGaps: true,
       }]
     },
     options: makeChartOptions('GW', c => `HP: ${c.raw.toFixed(0)} GW`, 0, yMaxHp, getHalfHourLabels(hpTimes)),
@@ -949,7 +958,14 @@ async function loadSolarWind() {
     );
 
     // Bzグラフ（timesとvalsの長さを必ず揃える）
-    const bzTimes = histMag.map(r => r[0].slice(11,16));
+    // タイムスタンプは "YYYY-MM-DD HH:MM:SS.sss" or "YYYY-MM-DDTHH:MM:SS.sss" 形式
+    // UTC時刻HH:MMを取り出す
+    const bzTimes = histMag.map(r => {
+      const ts = r[0] || '';
+      // スペースまたはTで分割してHH:MM部分を取得
+      const timePart = ts.includes('T') ? ts.slice(11,16) : ts.slice(11,16);
+      return timePart;
+    });
     const bzVals  = histMag.map(r => { const v = parseFloat(r[3]); return isNaN(v) ? null : v; });
     drawBzChart(bzTimes, bzVals, arrivalIdx, speed, curLoc.tz);
 
