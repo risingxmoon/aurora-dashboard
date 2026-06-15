@@ -200,9 +200,32 @@
     <div class="mc"><div class="ml">Kp指数</div><div class="mv" id="kp">--</div><div class="ms" style="color:var(--hint)">現場では参考程度</div></div>
   </div>
 
-  <p class="section-label">Bzの推移（過去2時間）</p>
-  <div class="card" style="padding:.875rem 1rem">
-    <canvas id="bzChart" height="72"></canvas>
+  <p class="section-label">太陽風データ（過去2時間）</p>
+  <div class="card" style="padding:.875rem 1rem;margin-bottom:.75rem">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Bz（磁場南北） <span style="color:var(--hint);font-size:10px">— 縦線：現在地球に届いているデータ</span></div>
+    <div style="position:relative;height:160px"><canvas id="bzChart"></canvas></div>
+  </div>
+  <div class="card" style="padding:.875rem 1rem;margin-bottom:.75rem">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">Bt（磁場総量）</div>
+    <div style="position:relative;height:160px"><canvas id="btChart"></canvas></div>
+  </div>
+  <div class="card" style="padding:.875rem 1rem;margin-bottom:.75rem">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">密度（protons/cm³）</div>
+    <div style="position:relative;height:160px"><canvas id="densChart"></canvas></div>
+  </div>
+  <div class="card" style="padding:.875rem 1rem;margin-bottom:1.25rem">
+    <div style="font-size:11px;color:var(--muted);margin-bottom:6px">太陽風速度（km/s）</div>
+    <div style="position:relative;height:160px"><canvas id="spdChart"></canvas></div>
+  </div>
+
+  <p class="section-label">HP（半球電力）推移（過去6時間） <span style="font-size:10px;color:var(--hint)">— 縦線：地球到達推定（+45分）</span></p>
+  <div class="card" style="padding:.875rem 1rem;margin-bottom:1.25rem">
+    <div style="position:relative;height:160px"><canvas id="hpChart"></canvas></div>
+  </div>
+
+  <p class="section-label">Kp指数（過去24時間）</p>
+  <div class="card" style="padding:.875rem 1rem;margin-bottom:1.25rem">
+    <div style="position:relative;height:160px"><canvas id="kpChart"></canvas></div>
   </div>
 
   <hr class="divider">
@@ -364,7 +387,7 @@ const LOCS = [
   {name:'釧路（日本）',lat:42.98,lon:144.38,tz:9,tzName:'JST',mlat:34,mmt:'23:30',hpMin:90,zone:'低緯度'},
 ];
 
-let bzChart = null;
+let bzChart = null, btChart = null, densChart = null, spdChart = null, hpChart = null, kpChart = null;
 let curLoc = LOCS.find(l => l.name.includes('テカポ'));
 
 function buildSelect() {
@@ -582,30 +605,311 @@ function updateRetreat(bz, speed) {
   ).join('');
 }
 
-function drawChart(times, values) {
+// 地球到達ラインのX軸インデックスを計算（L1点→地球、太陽風速度から）
+// 戻り値: インデックス番号（0〜times.length-1）、見つからなければ-1
+function earthArrivalIndex(times, speedKms) {
+  if (!times || times.length === 0 || !speedKms || speedKms <= 0) return -1;
+  const propagMin = Math.round(1500000 / speedKms / 60); // L1距離150万km ÷ 速度
+  const nowUtc = new Date().toISOString().slice(11,16);
+  const nowMins = parseInt(nowUtc.slice(0,2))*60 + parseInt(nowUtc.slice(3,5));
+  // 「今からpropagMin分前」のデータが今地球に届いているデータ
+  const targetMins = ((nowMins - propagMin) + 1440) % 1440;
+  let best = -1, bestDiff = 9999;
+  times.forEach((t, i) => {
+    if (!t) return;
+    const tm = (parseInt(t.slice(0,2))*60 + parseInt(t.slice(3,5)) + 1440) % 1440;
+    const diff = Math.abs(tm - targetMins);
+    const diff2 = Math.abs(diff - 1440); // 日付またぎ
+    const minDiff = Math.min(diff, diff2);
+    if (minDiff < bestDiff) { bestDiff = minDiff; best = i; }
+  });
+  return best;
+}
+
+// 共通チャートオプション生成
+function makeChartOptions(yLabel, tooltipFn, yMin, yMax, gridLabels) {
+  const yScale = {
+    ticks: { font:{size:9}, color:'#6b7280' },
+    grid: { color:'rgba(255,255,255,0.06)' },
+    title: { display:true, text:yLabel, font:{size:9}, color:'#6b7280' }
+  };
+  if (yMin !== undefined) yScale.min = yMin;
+  if (yMax !== undefined) yScale.max = yMax;
+  const gridSet = new Set(gridLabels || []);
+  return {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: tooltipFn } }
+    },
+    scales: {
+      x: {
+        ticks: {
+          font: { size: 9 },
+          color: '#6b7280',
+          maxRotation: 0,
+          autoSkip: false,
+          // 30分刻みラベルのみ表示、それ以外は空文字
+          callback: function(val, idx) {
+            const label = this.getLabelForValue(val);
+            if (!label) return '';
+            const mins = parseInt(label.slice(3,5));
+            return (mins === 0 || mins === 30) ? label : '';
+          }
+        },
+        grid: {
+          color: '#ffffff',
+          // 30分刻みは明るく、それ以外は非表示
+          lineWidth: function(ctx) {
+            const label = ctx.chart.data.labels[ctx.index];
+            if (!label) return 0;
+            const mins = parseInt(label.slice(3,5));
+            return (mins === 0 || mins === 30) ? 1 : 0;
+          }
+        }
+      },
+      y: yScale
+    }
+  };
+}
+
+// 時刻配列から「30分刻み」に該当するラベルを抽出（プラグイン用）
+function getHalfHourLabels(times) {
+  return times.filter(t => {
+    if (!t || t.length < 5) return false;
+    const mins = parseInt(t.slice(3,5));
+    return mins === 0 || mins === 30;
+  });
+}
+
+// データを等間隔グリッドに正規化
+// 右端を「現在UTC時刻」に固定し、左へ totalMins 分さかのぼる
+// stepMins: グリッド間隔（分）。1分刻みデータは1、5分刻みデータは5
+// tzOffset: UTCからの時差（JST=9, NZST=12, MST=-7 など）
+function normalizeToGrid(rawTimes, rawValues, totalMins, tzOffset, stepMins) {
+  const tz = (tzOffset !== undefined) ? tzOffset : 0;
+  const step = stepMins || 1;
+
+  // 右端 = 現在UTC時刻（分）
+  const now = new Date();
+  const nowUtcMins = now.getUTCHours() * 60 + now.getUTCMinutes();
+
+  // グリッド生成（古い順、step分刻み）
+  const totalSteps = Math.ceil(totalMins / step);
+  const utcLabels = [];
+  const labels = [];
+  for (let i = totalSteps - 1; i >= 0; i--) {
+    const utcMins = ((nowUtcMins - i * step) + 1440) % 1440;
+    const localMins = ((utcMins + tz * 60) + 1440 * 2) % 1440;
+    const uh = String(Math.floor(utcMins / 60)).padStart(2, '0');
+    const um = String(utcMins % 60).padStart(2, '0');
+    const lhh = String(Math.floor(localMins / 60)).padStart(2, '0');
+    const lmm = String(localMins % 60).padStart(2, '0');
+    utcLabels.push(uh + ':' + um);
+    labels.push(lhh + ':' + lmm);
+  }
+
+  // 実データをUTCキーでマッピング
+  const dataMap = new Map();
+  rawTimes.forEach((t, i) => { if (t) dataMap.set(t, rawValues[i]); });
+
+  // step>1の場合、グリッド時刻±(step/2)分以内のデータをマッチング
+  const values = utcLabels.map(ul => {
+    if (step === 1) {
+      const v = dataMap.get(ul);
+      return (v !== undefined && v !== null && !isNaN(v)) ? v : null;
+    }
+    // 5分刻み等: ±2分以内で最近傍マッチ
+    const [uh, um] = ul.split(':').map(Number);
+    const ulMins = uh * 60 + um;
+    let best = null, bestDiff = step;
+    dataMap.forEach((v, key) => {
+      const [kh, km] = key.split(':').map(Number);
+      const kMins = kh * 60 + km;
+      let diff = Math.abs(kMins - ulMins);
+      if (diff > 720) diff = 1440 - diff;
+      if (diff <= bestDiff && v !== null && !isNaN(v)) { best = v; bestDiff = diff; }
+    });
+    return best;
+  });
+
+  return { labels, values, utcLabels };
+}
+
+// 地球到達ライン付き縦線アノテーションをデータセットで代替（annotation plugin不要）
+function makeArrivalDataset(times, arrivalIdx) {
+  if (arrivalIdx < 0) return null;
+  // 透明な線グラフで縦線位置をマーク（Chart.jsのannotationなしで実現）
+  return null; // 後述のプラグインで対応
+}
+
+// Bzグラフ（棒グラフ、色分け）
+function drawBzChart(times, values, arrivalIdx, arrivalSpeed, tzOffset) {
   const ctx = document.getElementById('bzChart').getContext('2d');
   if (bzChart) bzChart.destroy();
+  const arrivalPlugin = makeArrivalPlugin(arrivalIdx, '#60a5fa');
+  // 等間隔グリッドに正規化（欠損補完）
+  const grid = normalizeToGrid(times, values, 120, tzOffset);
+  const gTimes = grid.labels;
+  const gVals  = grid.values;
+
+  // Y軸: 0を必ず含み、データ範囲＋余白で自動決定
+  const valid = gVals.filter(v => v !== null && !isNaN(v));
+  const dataMin = valid.length ? Math.min(...valid) : -5;
+  const dataMax = valid.length ? Math.max(...valid) : 5;
+  const pad = Math.max(Math.abs(dataMax - dataMin) * 0.15, 2);
+  const yMin = Math.min(0, dataMin) - pad;
+  const yMax = Math.max(0, dataMax) + pad;
+
+  // 地球到達ラインもグリッド上で再計算
+  const gArrivalIdx = earthArrivalIndex(gTimes, arrivalSpeed || 450);
+
   bzChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: gTimes,
+      datasets: [{
+        data: gVals,
+        backgroundColor: gVals.map(v => v === null ? 'transparent' : v <= -10 ? '#22c55e' : v <= -5 ? '#4ade80' : v < 0 ? '#86efac' : v >= 10 ? '#7f1d1d' : v >= 5 ? '#ef4444' : v > 0 ? '#fca5a5' : '#4a5568'),
+        borderRadius: 2, barThickness: 'flex',
+      }]
+    },
+    options: makeChartOptions('nT', c => `Bz: ${c.raw.toFixed(1)} nT`, yMin, yMax, getHalfHourLabels(gTimes)),
+    plugins: [makeArrivalPlugin(gArrivalIdx, '#60a5fa')]
+  });
+}
+
+// 折れ線グラフ汎用
+// yMin/yMax は「最低保証範囲」。データがはみ出す場合は自動拡張する
+function drawLineChart(canvasId, chartRef, times, values, color, yLabel, tooltipLabel, arrivalIdx, yMinFloor, yMaxCeil, arrivalSpeed, tzOffset) {
+  const ctx = document.getElementById(canvasId).getContext('2d');
+  if (chartRef.ref) chartRef.ref.destroy();
+  const arrivalPlugin = makeArrivalPlugin(arrivalIdx, '#60a5fa');
+  // 等間隔グリッドに正規化
+  const grid = normalizeToGrid(times, values, 120, tzOffset);
+  const gTimes = grid.labels;
+  const gVals  = grid.values;
+
+  const valid = gVals.filter(v => v !== null && !isNaN(v));
+  const dataMin = valid.length ? Math.min(...valid) : yMinFloor;
+  const dataMax = valid.length ? Math.max(...valid) : yMaxCeil;
+  const padding = Math.max((dataMax - dataMin) * 0.15, 1);
+  const yMin = Math.max(yMinFloor, Math.floor(dataMin - padding));
+  const yMax = Math.ceil(dataMax + padding);
+
+  const gArrivalIdx = earthArrivalIndex(gTimes, arrivalSpeed || 450);
+
+  chartRef.ref = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: gTimes,
+      datasets: [{
+        data: gVals,
+        borderColor: color,
+        backgroundColor: color.replace(')', ',0.1)').replace('rgb','rgba'),
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+        spanGaps: true,
+      }]
+    },
+    options: makeChartOptions(yLabel, c => `${tooltipLabel}: ${c.raw.toFixed(1)}`, yMin, yMax, getHalfHourLabels(gTimes)),
+    plugins: [makeArrivalPlugin(gArrivalIdx, '#60a5fa')]
+  });
+}
+
+// 地球到達ラインをcanvas上に縦線で描くカスタムプラグイン
+// ※ Chart.js 4.x では plugins[] のオブジェクトIDが重複するとエラーになるため
+//    毎回ユニークなIDを生成する
+let _arrivalPluginCounter = 0;
+function makeArrivalPlugin(arrivalIdx, color) {
+  const uid = 'arrivalLine_' + (++_arrivalPluginCounter);
+  return {
+    id: uid,
+    afterDraw(chart) {
+      if (arrivalIdx < 0 || arrivalIdx >= chart.data.labels.length) return;
+      const ctx = chart.ctx;
+      const xScale = chart.scales.x;
+      const yScale = chart.scales.y;
+      // Chart.js 4.x: カテゴリ軸はラベル文字列でピクセル取得
+      const label = chart.data.labels[arrivalIdx];
+      const x = xScale.getPixelForValue(label);
+      if (!x || isNaN(x)) return;
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x, yScale.top);
+      ctx.lineTo(x, yScale.bottom);
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = color;
+      ctx.font = '9px sans-serif';
+      // ラベルが右端に近い場合は左側に表示
+      const textX = x + 3 + 36 > xScale.right ? x - 40 : x + 3;
+      ctx.fillText('地球到達', textX, yScale.top + 10);
+      ctx.restore();
+    }
+  };
+}
+
+// Kp棒グラフ（色分け）
+function drawKpChart(times, values) {
+  const ctx = document.getElementById('kpChart').getContext('2d');
+  if (kpChart) kpChart.destroy();
+  kpChart = new Chart(ctx, {
     type: 'bar',
     data: {
       labels: times,
       datasets: [{
         data: values,
-        backgroundColor: values.map(v => v <= -10 ? '#22c55e' : v <= -5 ? '#f59e0b' : v > 0 ? '#ef4444' : '#4a5568'),
-        borderRadius: 2,
-        barThickness: 'flex',
+        backgroundColor: values.map(v => v >= 5 ? '#ef4444' : v >= 4 ? '#f59e0b' : v >= 3 ? '#60a5fa' : '#4a5568'),
+        borderRadius: 2, barThickness: 'flex',
       }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `Bz: ${c.raw.toFixed(1)} nT` } } },
-      scales: {
-        x: { ticks: { font:{size:9}, color:'#4a5568', maxTicksLimit:8, maxRotation:0 }, grid: { color:'rgba(255,255,255,0.04)' } },
-        y: { ticks: { font:{size:9}, color:'#4a5568' }, grid: { color:'rgba(255,255,255,0.04)' },
-             title: { display:true, text:'nT', font:{size:9}, color:'#4a5568' } }
-      }
-    }
+    options: makeChartOptions('Kp', c => `Kp: ${c.raw.toFixed(1)}`, 0, 9, getHalfHourLabels(times))
+  });
+}
+
+// HPグラフ（折れ線、+45分固定ライン）
+function drawHpChart(times, values, isSouth, tzOffset) {
+  const ctx = document.getElementById('hpChart').getContext('2d');
+  if (hpChart) hpChart.destroy();
+  // +45分後のインデックスを探す（HPは5分刻み → 9ステップ後）
+  const arrivalSteps = 9; // 45分 / 5分
+  const arrivalIdx = Math.max(0, times.length - 1 - arrivalSteps);
+  const arrivalPlugin = makeArrivalPlugin(hpArrivalIdx, '#a78bfa');
+  // HPを等間隔グリッドに正規化（5分刻み×72点=6時間、右端=現在時刻）
+  const hpGrid = normalizeToGrid(times, values, 360, tzOffset, 5);
+  const hpTimes = hpGrid.labels;
+  const hpVals  = hpGrid.values;
+
+  const validHp = hpVals.filter(v => v !== null && !isNaN(v));
+  const hpMax = validHp.length ? Math.max(...validHp) : 100;
+  const yMaxHp = Math.max(100, Math.ceil(hpMax * 1.2));
+
+  // +45分固定ライン: 右端から45分前 = 右端から9ステップ前
+  const hpArrivalIdx = Math.max(0, hpTimes.length - 1 - 9);
+
+  hpChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: hpTimes,
+      datasets: [{
+        data: hpVals,
+        borderColor: isSouth ? '#60a5fa' : '#a78bfa',
+        backgroundColor: isSouth ? 'rgba(96,165,250,0.1)' : 'rgba(167,139,250,0.1)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.3,
+        fill: true,
+      }]
+    },
+    options: makeChartOptions('GW', c => `HP: ${c.raw.toFixed(0)} GW`, 0, yMaxHp, getHalfHourLabels(hpTimes)),
+    plugins: [arrivalPlugin]
   });
 }
 
@@ -644,8 +948,41 @@ async function loadSolarWind() {
     document.getElementById('spds').style.color = speed>=500?'var(--amber)':'var(--muted)';
     document.getElementById('update-time').textContent = '更新：'+lm[0].slice(11,16)+' UTC';
 
-    const hist = mag.slice(-24).map(r=>({t:r[0].slice(11,16),v:parseFloat(r[3])})).filter(r=>!isNaN(r.v));
-    drawChart(hist.map(r=>r.t), hist.map(r=>r.v));
+    // 過去2時間 = 5分刻みで24点
+    const histMag  = mag.slice(-120).filter(r => r[0] !== null);
+    const histPlas = plas.slice(-120).filter(r => r[0] !== null);
+
+    // 地球到達ライン計算（L1→地球の伝播時間）
+    const arrivalIdx = earthArrivalIndex(
+      histMag.map(r => r[0].slice(11,16)), speed
+    );
+
+    // Bzグラフ（timesとvalsの長さを必ず揃える）
+    const bzTimes = histMag.map(r => r[0].slice(11,16));
+    const bzVals  = histMag.map(r => { const v = parseFloat(r[3]); return isNaN(v) ? null : v; });
+    drawBzChart(bzTimes, bzVals, arrivalIdx, speed, curLoc.tz);
+
+    // Btグラフ
+    const btRef = {};
+    drawLineChart('btChart', btRef, bzTimes,
+      histMag.map(r => parseFloat(r[6])),
+      '#f59e0b', 'nT', 'Bt', arrivalIdx, 0, 80, speed, curLoc.tz);
+    btChart = btRef.ref;
+
+    // 密度グラフ（plasma col[1]）
+    const densRef = {};
+    drawLineChart('densChart', densRef, histPlas.map(r => r[0].slice(11,16)),
+      histPlas.map(r => parseFloat(r[1])),
+      '#60a5fa', 'p/cm³', '密度', arrivalIdx, 0, 60, speed, curLoc.tz);
+    densChart = densRef.ref;
+
+    // 速度グラフ（plasma col[2]）
+    const spdRef = {};
+    drawLineChart('spdChart', spdRef, histPlas.map(r => r[0].slice(11,16)),
+      histPlas.map(r => parseFloat(r[2])),
+      '#22c55e', 'km/s', '速度', arrivalIdx, 300, 1100, speed, curLoc.tz);
+    spdChart = spdRef.ref;
+
     updateVerdict(bz);
     updateRetreat(bz, speed);
   } catch(e) {
@@ -673,8 +1010,15 @@ async function loadSolarWind() {
         document.getElementById('spd').textContent = Math.round(speed2)+' km/s';
         document.getElementById('spds').textContent = speed2>=600?'高速風（コロナホール）':speed2>=500?'やや高速':'通常速度';
         document.getElementById('update-time').textContent = '更新(直接)：'+lm2[0].slice(11,16)+' UTC';
-        const hist2 = mag2.slice(-24).map(r=>({t:r[0].slice(11,16),v:parseFloat(r[3])})).filter(r=>!isNaN(r.v));
-        drawChart(hist2.map(r=>r.t), hist2.map(r=>r.v));
+        const histMag2  = mag2.slice(-120).filter(r => r[0] !== null);
+        const histPlas2 = plas2.slice(-120).filter(r => r[0] !== null);
+        const arrivalIdx2 = earthArrivalIndex(histMag2.map(r => r[0].slice(11,16)), speed2);
+        const bzTimes2 = histMag2.map(r => r[0].slice(11,16));
+        const bzVals2 = histMag2.map(r => { const v = parseFloat(r[3]); return isNaN(v) ? null : v; });
+        drawBzChart(bzTimes2, bzVals2, arrivalIdx2);
+        const btRef2 = {}; drawLineChart('btChart', btRef2, bzTimes2, histMag2.map(r => parseFloat(r[6])), '#f59e0b', 'nT', 'Bt', arrivalIdx2, 0, 80); btChart = btRef2.ref;
+        const densRef2 = {}; drawLineChart('densChart', densRef2, histPlas2.map(r => r[0].slice(11,16)), histPlas2.map(r => parseFloat(r[1])), '#60a5fa', 'p/cm³', '密度', arrivalIdx2, 0, 60); densChart = densRef2.ref;
+        const spdRef2 = {}; drawLineChart('spdChart', spdRef2, histPlas2.map(r => r[0].slice(11,16)), histPlas2.map(r => parseFloat(r[2])), '#22c55e', 'km/s', '速度', arrivalIdx2, 200, 1100); spdChart = spdRef2.ref;
         updateVerdict(bz2);
         updateRetreat(bz2, speed2);
         return;
@@ -705,28 +1049,40 @@ async function loadHp() {
   // 観測地の緯度で南北を自動判定
   const isSouth = curLoc.lat < 0;
 
-  // まず data/hp.json（GitHub Actionsが生成）を試す
-  try {
-    const res = await fetch('data/hp.json');
-    const data = await res.json();
-    // フォーマット例: {"north": 42, "south": 38, "observed": "..."}
-    const hp = parseFloat(isSouth ? data.south : data.north);
-    if (!isNaN(hp)) { applyHp(hp); return; }
-  } catch(e) {}
-
-  // フォールバック：NOAAのテキストファイルを直接取得
+  // NOAAのテキストファイルを直接取得（グラフデータも含む）
   try {
     const res2 = await fetch('https://services.swpc.noaa.gov/text/aurora-nowcast-hemi-power.txt');
     const text = await res2.text();
-    // コメント行を除いた最終行を取得
     const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'));
     if (lines.length > 0) {
-      const cols = lines[lines.length - 1].trim().split(/\s+/);
-      // 列: OBS_TIME  FORECAST_TIME  NORTH_HP  SOUTH_HP
-      const hp = parseFloat(isSouth ? cols[3] : cols[2]);
-      if (!isNaN(hp)) { applyHp(hp); return; }
+      // 過去6時間 = 5分刻みで72点
+      const recent = lines.slice(-72);
+      const hpTimes = recent.map(l => {
+        const t = l.trim().split(/\s+/)[0]; // YYYY-MM-DD_HH:MM
+        return t ? t.slice(11,16) : '';
+      }).filter(Boolean);
+      const hpVals = recent.map(l => {
+        const cols = l.trim().split(/\s+/);
+        return parseFloat(isSouth ? cols[3] : cols[2]);
+      });
+
+      // 最新値を表示
+      const latestHp = hpVals[hpVals.length - 1];
+      if (!isNaN(latestHp)) {
+        applyHp(latestHp);
+        drawHpChart(hpTimes, hpVals, isSouth, curLoc.tz);
+        return;
+      }
     }
   } catch(e2) {}
+
+  // data/hp.json フォールバック（グラフなし）
+  try {
+    const res = await fetch('data/hp.json');
+    const data = await res.json();
+    const hp = parseFloat(isSouth ? data.south : data.north);
+    if (!isNaN(hp)) { applyHp(hp); return; }
+  } catch(e) {}
 
   document.getElementById('hp').textContent = '--';
   document.getElementById('hps').textContent = '--';
@@ -738,16 +1094,24 @@ async function loadKp() {
     document.getElementById('kp').textContent = isNaN(kp) ? '--' : kp.toFixed(1);
   }
 
-  // data/kp.json を試す（GitHub Actionsが生成）
-  // noaa-planetary-k-index.json の形式：[{time_tag, Kp, a_running, station_count}, ...]
+  // Kpグラフ描画共通
+  function applyKpChart(rows) {
+    // 過去24時間 = 3時間刻みで8点
+    const recent = rows.slice(-8);
+    const times = recent.map(r => r.time_tag.slice(11,16));
+    const vals  = recent.map(r => parseFloat(r.Kp));
+    drawKpChart(times, vals);
+  }
+
+  // data/kp.json を試す
   try {
     const res = await fetch('data/kp.json');
     const raw = await res.json();
     if (Array.isArray(raw) && raw.length > 0) {
-      // オブジェクト配列形式（{time_tag, Kp}）
       const rows = raw.filter(r => r.Kp !== null && r.Kp !== undefined && !isNaN(parseFloat(r.Kp)));
       if (rows.length > 0) {
         applyKp(parseFloat(rows[rows.length - 1].Kp));
+        applyKpChart(rows);
         return;
       }
     }
@@ -761,6 +1125,7 @@ async function loadKp() {
       const rows2 = raw2.filter(r => r.Kp !== null && r.Kp !== undefined && !isNaN(parseFloat(r.Kp)));
       if (rows2.length > 0) {
         applyKp(parseFloat(rows2[rows2.length - 1].Kp));
+        applyKpChart(rows2);
         return;
       }
     }
