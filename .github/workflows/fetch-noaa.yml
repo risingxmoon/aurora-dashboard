@@ -28,9 +28,9 @@ jobs:
             -o data/epam.json || echo "[]" > data/epam.json
 
           # mag・plasma を 7-day に変更（6時間分グラフ用）
-          curl -sf "https://services.swpc.noaa.gov/products/solar-wind/mag-7-day.json" \
+          curl -sf "https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json" \
             -o data/mag.json || echo "[]" > data/mag.json
-          curl -sf "https://services.swpc.noaa.gov/products/solar-wind/plasma-7-day.json" \
+          curl -sf "https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json" \
             -o data/plasma.json || echo "[]" > data/plasma.json
 
           # HP（半球電力）履歴をJSONで保存（過去6時間=72点）
