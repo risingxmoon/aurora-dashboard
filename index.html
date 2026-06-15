@@ -750,7 +750,7 @@ function drawBzChart(times, values, arrivalIdx, arrivalSpeed, tzOffset) {
   if (bzChart) bzChart.destroy();
   const arrivalPlugin = makeArrivalPlugin(arrivalIdx, '#60a5fa');
   // 等間隔グリッドに正規化（欠損補完）
-  const grid = normalizeToGrid(times, values, 120, tzOffset);
+  const grid = normalizeToGrid(times, values, 360, tzOffset);
   const gTimes = grid.labels;
   const gVals  = grid.values;
 
@@ -786,8 +786,8 @@ function drawLineChart(canvasId, chartRef, times, values, color, yLabel, tooltip
   const ctx = document.getElementById(canvasId).getContext('2d');
   if (chartRef.ref) chartRef.ref.destroy();
   const arrivalPlugin = makeArrivalPlugin(arrivalIdx, '#60a5fa');
-  // 等間隔グリッドに正規化
-  const grid = normalizeToGrid(times, values, 120, tzOffset);
+  // 等間隔グリッドに正規化（6時間）
+  const grid = normalizeToGrid(times, values, 360, tzOffset);
   const gTimes = grid.labels;
   const gVals  = grid.values;
 
@@ -948,9 +948,9 @@ async function loadSolarWind() {
     document.getElementById('spds').style.color = speed>=500?'var(--amber)':'var(--muted)';
     document.getElementById('update-time').textContent = '更新：'+lm[0].slice(11,16)+' UTC';
 
-    // 過去2時間 = 5分刻みで24点
-    const histMag  = mag.slice(-120).filter(r => r[0] !== null);
-    const histPlas = plas.slice(-120).filter(r => r[0] !== null);
+    // 過去6時間 = 1分刻みで360点
+    const histMag  = mag.slice(-360).filter(r => r[0] !== null);
+    const histPlas = plas.slice(-360).filter(r => r[0] !== null);
 
     // 地球到達ライン計算（L1→地球の伝播時間）
     const arrivalIdx = earthArrivalIndex(
@@ -990,8 +990,8 @@ async function loadSolarWind() {
     // フォールバック：直接NOAAから取得を試みる
     try {
       const [magRes2, plasRes2] = await Promise.all([
-        fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json'),
-        fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json')
+        fetch('https://services.swpc.noaa.gov/products/solar-wind/mag-6-hour.json'),
+        fetch('https://services.swpc.noaa.gov/products/solar-wind/plasma-6-hour.json')
       ]);
       const magRaw2 = await magRes2.json();
       const plasRaw2 = await plasRes2.json();
@@ -1010,8 +1010,8 @@ async function loadSolarWind() {
         document.getElementById('spd').textContent = Math.round(speed2)+' km/s';
         document.getElementById('spds').textContent = speed2>=600?'高速風（コロナホール）':speed2>=500?'やや高速':'通常速度';
         document.getElementById('update-time').textContent = '更新(直接)：'+lm2[0].slice(11,16)+' UTC';
-        const histMag2  = mag2.slice(-120).filter(r => r[0] !== null);
-        const histPlas2 = plas2.slice(-120).filter(r => r[0] !== null);
+        const histMag2  = mag2.slice(-360).filter(r => r[0] !== null);
+        const histPlas2 = plas2.slice(-360).filter(r => r[0] !== null);
         const arrivalIdx2 = earthArrivalIndex(histMag2.map(r => r[0].slice(11,16)), speed2);
         const bzTimes2 = histMag2.map(r => r[0].slice(11,16));
         const bzVals2 = histMag2.map(r => { const v = parseFloat(r[3]); return isNaN(v) ? null : v; });
@@ -1049,24 +1049,41 @@ async function loadHp() {
   // 観測地の緯度で南北を自動判定
   const isSouth = curLoc.lat < 0;
 
-  // NOAAのテキストファイルを直接取得（グラフデータも含む）
+  // 1. data/hp.json（GitHub Actionsが5分ごとに更新）を優先
+  try {
+    const res = await fetch('data/hp.json');
+    const data = await res.json();
+    // 履歴配列形式: { history: [{time, north, south},...], north, south }
+    if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+      const hpTimes = data.history.map(r => r.time ? r.time.slice(11,16) : '').filter(Boolean);
+      const hpVals  = data.history.map(r => parseFloat(isSouth ? r.south : r.north));
+      const latestHp = hpVals[hpVals.length - 1];
+      if (!isNaN(latestHp)) {
+        applyHp(latestHp);
+        drawHpChart(hpTimes, hpVals, isSouth, curLoc.tz);
+        return;
+      }
+    }
+    // 最新値のみの旧形式（グラフなし）
+    const hp = parseFloat(isSouth ? data.south : data.north);
+    if (!isNaN(hp)) { applyHp(hp); return; }
+  } catch(e) {}
+
+  // 2. フォールバック: NOAAテキストを直接fetch（CORSが通る環境のみ有効）
   try {
     const res2 = await fetch('https://services.swpc.noaa.gov/text/aurora-nowcast-hemi-power.txt');
     const text = await res2.text();
     const lines = text.split('\n').filter(l => l.trim() && !l.startsWith('#'));
     if (lines.length > 0) {
-      // 過去6時間 = 5分刻みで72点
       const recent = lines.slice(-72);
       const hpTimes = recent.map(l => {
-        const t = l.trim().split(/\s+/)[0]; // YYYY-MM-DD_HH:MM
+        const t = l.trim().split(/\s+/)[0];
         return t ? t.slice(11,16) : '';
       }).filter(Boolean);
       const hpVals = recent.map(l => {
         const cols = l.trim().split(/\s+/);
         return parseFloat(isSouth ? cols[3] : cols[2]);
       });
-
-      // 最新値を表示
       const latestHp = hpVals[hpVals.length - 1];
       if (!isNaN(latestHp)) {
         applyHp(latestHp);
@@ -1075,14 +1092,6 @@ async function loadHp() {
       }
     }
   } catch(e2) {}
-
-  // data/hp.json フォールバック（グラフなし）
-  try {
-    const res = await fetch('data/hp.json');
-    const data = await res.json();
-    const hp = parseFloat(isSouth ? data.south : data.north);
-    if (!isNaN(hp)) { applyHp(hp); return; }
-  } catch(e) {}
 
   document.getElementById('hp').textContent = '--';
   document.getElementById('hps').textContent = '--';
