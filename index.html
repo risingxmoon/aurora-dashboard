@@ -401,7 +401,8 @@ function buildSelect() {
     groups[g].forEach(l => {
       const o = document.createElement('option');
       o.value = LOCS.indexOf(l);
-      o.textContent = l.name;
+      const tzStr = l.tz === 0 ? 'UTC' : l.tz > 0 ? `UTC+${l.tz}` : `UTC${l.tz}`;
+      o.textContent = `${l.name}（${tzStr}）`;
       if (l === curLoc) o.selected = true;
       og.appendChild(o);
     });
