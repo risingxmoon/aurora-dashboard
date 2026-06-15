@@ -388,7 +388,11 @@ const LOCS = [
 ];
 
 let bzChart = null, btChart = null, densChart = null, spdChart = null, hpChart = null, kpChart = null;
-let curLoc = LOCS[0]; // デフォルト: イエローナイフ
+// 前回の観測地をlocalStorageから復元
+let _savedIdx = 0;
+try { _savedIdx = parseInt(localStorage.getItem('aurora_loc_idx') || '0') || 0; } catch(e) {}
+_savedIdx = Math.min(_savedIdx, LOCS.length - 1);
+let curLoc = LOCS[_savedIdx];
 
 function buildSelect() {
   const sel = document.getElementById('loc-sel');
@@ -403,7 +407,7 @@ function buildSelect() {
       o.value = LOCS.indexOf(l);
       const tzStr = l.tz === 0 ? 'UTC' : l.tz > 0 ? `UTC+${l.tz}` : `UTC${l.tz}`;
       o.textContent = `${l.name}（${tzStr}）`;
-      if (l === curLoc) o.selected = true;
+      if (LOCS.indexOf(l) === _savedIdx) o.selected = true;
       og.appendChild(o);
     });
     sel.appendChild(og);
@@ -411,12 +415,18 @@ function buildSelect() {
 }
 
 async function onLocChange() {
-  curLoc = LOCS[parseInt(document.getElementById('loc-sel').value)];
+  const idx = parseInt(document.getElementById('loc-sel').value);
+  curLoc = LOCS[idx];
+  _savedIdx = idx;
+  try { localStorage.setItem('aurora_loc_idx', idx); } catch(e) {}
   document.getElementById('loc-badge').textContent = `MLAT ${curLoc.mlat}°  MMT ${curLoc.mmt} ${curLoc.tzName}`;
   buildTimeline();
   buildMoon();
   buildHpHint();
   updateClocks();
+  // ロード中表示
+  document.getElementById('verdict').className = 'verdict v-idle';
+  document.getElementById('verdict').innerHTML = '<div class="v-title">データを読み込み中...</div>';
   await loadAll();
 }
 
@@ -758,7 +768,6 @@ function makeArrivalDataset(times, arrivalIdx) {
 function drawBzChart(times, values, arrivalIdx, arrivalSpeed, tzOffset) {
   const ctx = document.getElementById('bzChart').getContext('2d');
   if (bzChart) bzChart.destroy();
-  const arrivalPlugin = makeArrivalPlugin(arrivalIdx, '#60a5fa');
   // 等間隔グリッドに正規化（欠損補完）
   const grid = normalizeToGrid(times, values, 360, tzOffset);
   const gTimes = grid.labels;
@@ -795,7 +804,6 @@ function drawBzChart(times, values, arrivalIdx, arrivalSpeed, tzOffset) {
 function drawLineChart(canvasId, chartRef, times, values, color, yLabel, tooltipLabel, arrivalIdx, yMinFloor, yMaxCeil, arrivalSpeed, tzOffset) {
   const ctx = document.getElementById(canvasId).getContext('2d');
   if (chartRef.ref) chartRef.ref.destroy();
-  const arrivalPlugin = makeArrivalPlugin(arrivalIdx, '#60a5fa');
   // 等間隔グリッドに正規化（6時間）
   const grid = normalizeToGrid(times, values, 360, tzOffset);
   const gTimes = grid.labels;
