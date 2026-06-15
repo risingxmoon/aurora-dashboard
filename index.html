@@ -605,25 +605,16 @@ function updateRetreat(bz, speed) {
   ).join('');
 }
 
-// 地球到達ラインのX軸インデックスを計算（L1点→地球、太陽風速度から）
-// 戻り値: インデックス番号（0〜times.length-1）、見つからなければ-1
-function earthArrivalIndex(times, speedKms) {
-  if (!times || times.length === 0 || !speedKms || speedKms <= 0) return -1;
-  const propagMin = Math.round(1500000 / speedKms / 60); // L1距離150万km ÷ 速度
-  const nowUtc = new Date().toISOString().slice(11,16);
-  const nowMins = parseInt(nowUtc.slice(0,2))*60 + parseInt(nowUtc.slice(3,5));
-  // 「今からpropagMin分前」のデータが今地球に届いているデータ
-  const targetMins = ((nowMins - propagMin) + 1440) % 1440;
-  let best = -1, bestDiff = 9999;
-  times.forEach((t, i) => {
-    if (!t) return;
-    const tm = (parseInt(t.slice(0,2))*60 + parseInt(t.slice(3,5)) + 1440) % 1440;
-    const diff = Math.abs(tm - targetMins);
-    const diff2 = Math.abs(diff - 1440); // 日付またぎ
-    const minDiff = Math.min(diff, diff2);
-    if (minDiff < bestDiff) { bestDiff = minDiff; best = i; }
-  });
-  return best;
+// 地球到達ラインのインデックスを計算
+// グリッドは右端=現在時刻、1分刻みなので
+// 伝播時間(分) = L1距離 / 速度 → 右端からその分だけ左のインデックス
+function earthArrivalIndex(gridLabels, speedKms) {
+  if (!gridLabels || gridLabels.length === 0 || !speedKms || speedKms <= 0) return -1;
+  const propagMin = Math.round(1500000 / speedKms / 60); // 約30〜90分
+  // グリッドは右端=最新(インデックスlength-1)、左=古い
+  // 伝播時間分だけ右端から左へずれた位置
+  const idx = gridLabels.length - 1 - propagMin;
+  return Math.max(0, Math.min(idx, gridLabels.length - 1));
 }
 
 // 共通チャートオプション生成
