@@ -41,7 +41,7 @@ jobs:
             SOUTH=$(echo "$LAST_LINE" | awk '{print $4}')
             OBS=$(echo "$LAST_LINE" | awk '{print $1}')
             # 過去72行（6時間分）を配列化
-            HISTORY=$(echo "$HP_TXT" | grep -v '^#' | grep -v '^$' | tail -72 | awk '{printf "{\"time\":\"%s\",\"north\":%s,\"south\":%s}", $1, $3, $4}' | paste -sd ',' | sed 's/^/[/' | sed 's/$/]/')
+            HISTORY=$(echo "$HP_TXT" | grep -v '^#' | grep -v '^$' | tail -72 | awk '{printf "{\"time\":\"%s\",\"north\":%s,\"south\":%s}\n", $1, $3, $4}' | paste -sd ',' | sed 's/^/[/' | sed 's/$/]/')
             echo "{\"north\":${NORTH:-0},\"south\":${SOUTH:-0},\"observed\":\"${OBS}\",\"history\":${HISTORY:-[]}}" > data/hp.json
           else
             echo "{\"north\":null,\"south\":null,\"history\":[]}" > data/hp.json
